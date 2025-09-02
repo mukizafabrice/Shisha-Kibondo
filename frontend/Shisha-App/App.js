@@ -1,23 +1,29 @@
-import { StyleSheet, Text, View } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
+import { Provider as PaperProvider } from "react-native-paper";
 import { AuthProvider } from "./context/AuthContext";
 import AppNavigator from "./navigation/AppNavigator";
+import { useFonts } from "expo-font";
+import { Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold } from "@expo-google-fonts/poppins";
 
 export default function App() {
+  const [fontsLoaded] = useFonts({
+    Poppins_400Regular,
+    Poppins_600SemiBold,
+    Poppins_700Bold,
+  });
+
+  if (!fontsLoaded) {
+    return null; // or a loading screen
+  }
+
   return (
-    <AuthProvider>
-      <NavigationContainer>
-        <AppNavigator />
-      </NavigationContainer>
-    </AuthProvider>
+    <PaperProvider>
+      <AuthProvider>
+        <NavigationContainer>
+          <AppNavigator />
+        </NavigationContainer>
+      </AuthProvider>
+    </PaperProvider>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-});

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import AuthService from "../services/authService";
+import AuthService from "../services/AuthService";
 import { Alert } from "react-native";
 
 const AuthContext = createContext();
@@ -14,7 +14,7 @@ export const AuthProvider = ({ children }) => {
     setIsLoading(true);
     try {
       const { user, token } = await AuthService.login(emailOrPhone, password);
-      console.log("User from AuthService.login:", user); // <-- Add this line
+      // console.log("User from AuthService.login:", user);
       setToken(token);
       setUser(user);
       await AsyncStorage.setItem("token", token);

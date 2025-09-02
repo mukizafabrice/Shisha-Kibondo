@@ -33,8 +33,8 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ["manager", "community_health_worker"],
-      default: "community_health_worker",
+      enum: ["manager", "umunyabuzima"],
+      default: "umunyabuzima",
     },
   },
   { timestamps: true }

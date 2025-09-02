@@ -10,7 +10,7 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // CORS middleware for specific origins
-const allowedOrigins = ["http://192.168.1.95:8081", "http://localhost"];
+const allowedOrigins = ["http://172.20.10.2:8081", "http://localhost"];
 app.use(
   cors({
     origin: allowedOrigins,
@@ -25,7 +25,7 @@ app.get("/", (req, res) => {
 });
 
 // Apply API routes
-app.use("/api/users", userRoutes);
+app.use("/api", userRoutes);
 
 connectDB()
   .then(() => {

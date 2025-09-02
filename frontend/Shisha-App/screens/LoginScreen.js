@@ -2,8 +2,6 @@ import React, { useState } from "react";
 import {
   View,
   Text,
-  TextInput,
-  TouchableOpacity,
   StyleSheet,
   SafeAreaView,
   Image,
@@ -11,8 +9,10 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  ImageBackground,
 } from "react-native";
-import AuthService from "../services/authService";
+import { TextInput, Button } from "react-native-paper";
+import AuthService from "../services/AuthService";
 import { useAuth } from "../context/AuthContext";
 import { useNavigation } from "@react-navigation/native";
 
@@ -20,9 +20,7 @@ const LoginScreen = ({ navigation }) => {
   const [emailOrPhone, setEmailOrPhone] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-
-  // Placeholder for the Google logo image. In a real app, you would import a local image.
-  const googleLogo = "https://img.icons8.com/color/48/000000/google-logo.png";
+  const [showPassword, setShowPassword] = useState(false);
 
   // ...existing code...
   const { login } = useAuth();
@@ -40,26 +38,6 @@ const LoginScreen = ({ navigation }) => {
     }
   };
 
-  // ...existing code...
-  const handleGoogleLogin = async () => {
-    setIsLoading(true);
-    try {
-      const result = await AuthService.googleSignIn();
-      if (result.success) {
-        Alert.alert("Success", "Google Sign-In successful!");
-        // TODO: Navigate to the main part of your app.
-      } else {
-        Alert.alert("Error", "Google Sign-In failed.");
-      }
-    } catch (error) {
-      Alert.alert(
-        "Error",
-        error.message || "An error occurred during Google Sign-In."
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleForgotPassword = () => {
     // Navigate to a "Forgot Password" screen.
@@ -68,75 +46,98 @@ const LoginScreen = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-      >
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={styles.content}>
-            <Image
-              source={{
-                uri: "https://placehold.co/100x100/A78BFA/ffffff?text=Logo",
-              }}
-              style={styles.logo}
-            />
-            <Text style={styles.title}>Welcome back</Text>
-            <Text style={styles.subtitle}>
-              Glad to see you again 👋
-              {"\n"}
-              Login to your account below
+    <ImageBackground source={require('../assets/background.jpg')} style={styles.background}>
+      <SafeAreaView style={styles.safeArea}>
+        <KeyboardAvoidingView
+          style={styles.container}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
+          <ScrollView contentContainerStyle={styles.scrollContent}>
+            <View style={styles.surface}>
+              <View style={styles.content}>
+                <Image
+                  source={require('../assets/logo.png')}
+                  style={styles.logo}
+                />
+                <Text style={styles.title}>Welcome back</Text>
+                <Text style={styles.subtitle}>
+                  Glad to see you again 👋
+                  {"\n"}
+                  Login to your account below
+                </Text>
+
+                <TextInput
+                  label="Email or Phone"
+                  value={emailOrPhone}
+                  onChangeText={setEmailOrPhone}
+                  autoCapitalize="none"
+                  mode="outlined"
+                  style={styles.input}
+                  theme={{ colors: { primary: '#007AFF' } }}
+                />
+                <TextInput
+                  label="Password"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  mode="outlined"
+                  style={styles.input}
+                  theme={{ colors: { primary: '#007AFF' } }}
+                  right={<TextInput.Icon icon={showPassword ? "eye-off" : "eye"} onPress={() => setShowPassword(!showPassword)} />}
+                />
+
+                <Button
+                  mode="contained"
+                  onPress={handleLogin}
+                  loading={isLoading}
+                  disabled={isLoading}
+                  style={styles.button}
+                  buttonColor="#007AFF"
+                >
+                  {isLoading ? "Logging in..." : "Login"}
+                </Button>
+
+                <Button
+                  mode="text"
+                  onPress={handleForgotPassword}
+                  style={styles.forgotButton}
+                  textColor="#007AFF"
+                >
+                  Forgot Password?
+                </Button>
+              </View>
+            </View>
+          </ScrollView>
+
+          <View style={styles.footer}>
+            <Text style={styles.footerLink} onPress={() => Alert.alert("About Us", "About Us page")}>
+              About Us
             </Text>
-
-            <TouchableOpacity
-              style={styles.googleButton}
-              onPress={handleGoogleLogin}
-            >
-              <Image source={{ uri: googleLogo }} style={styles.googleIcon} />
-              <Text style={styles.googleButtonText}>Continue with Google</Text>
-            </TouchableOpacity>
-
-            <TextInput
-              style={styles.input}
-              placeholder="enter email or phone..."
-              value={emailOrPhone}
-              onChangeText={setEmailOrPhone}
-              autoCapitalize="none"
-              placeholderTextColor="#999"
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="enter password..."
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              placeholderTextColor="#999"
-            />
-
-            <TouchableOpacity
-              style={styles.loginButton}
-              onPress={handleLogin}
-              disabled={isLoading}
-            >
-              <Text style={styles.loginButtonText}>
-                {isLoading ? "Logging in..." : "Login"}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity onPress={handleForgotPassword}>
-              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-            </TouchableOpacity>
+            <Text style={styles.footerSeparator}> | </Text>
+            <Text style={styles.footerLink} onPress={() => Alert.alert("Privacy Policy", "Privacy Policy page")}>
+              Privacy Policy
+            </Text>
+            <Text style={styles.footerSeparator}> | </Text>
+            <Text style={styles.footerLink} onPress={() => Alert.alert("Terms of Service", "Terms of Service page")}>
+              Terms of Service
+            </Text>
+            <Text style={styles.footerSeparator}> | </Text>
+            <Text style={styles.footerLink} onPress={() => Alert.alert("Contact Us", "Contact Us page")}>
+              Contact Us
+            </Text>
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </ImageBackground>
   );
 };
 
 const styles = StyleSheet.create({
+  background: {
+    flex: 1,
+  },
   safeArea: {
     flex: 1,
-    backgroundColor: "#fff",
   },
   container: {
     flex: 1,
@@ -146,9 +147,17 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     paddingVertical: 20,
+    paddingHorizontal: 20,
+  },
+  surface: {
+    width: "100%",
+    maxWidth: 400,
+    padding: 30,
+    borderRadius: 15,
+    elevation: 0,
   },
   content: {
-    width: "85%",
+    width: "100%",
     alignItems: "center",
   },
   logo: {
@@ -158,70 +167,54 @@ const styles = StyleSheet.create({
     borderRadius: 50,
   },
   title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    marginBottom: 5,
-    color: "#333",
+    fontSize: 32,
+    fontFamily: "Poppins_700Bold",
+    marginBottom: 8,
+    color: "#ffffff",
+    textAlign: "center",
   },
   subtitle: {
     fontSize: 16,
-    color: "#666",
+    fontFamily: "Poppins_400Regular",
+    color: "#ffffff",
     textAlign: "center",
-    marginBottom: 30,
-  },
-  googleButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 25,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    marginBottom: 20,
-    width: "100%",
-    justifyContent: "center",
-  },
-  googleIcon: {
-    width: 24,
-    height: 24,
-    marginRight: 10,
-  },
-  googleButtonText: {
-    fontSize: 16,
-    color: "#333",
-    fontWeight: "600",
+    marginBottom: 35,
+    lineHeight: 24,
   },
   input: {
     width: "100%",
-    height: 50,
-    borderColor: "#ddd",
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 15,
-    marginBottom: 15,
-    fontSize: 16,
-    backgroundColor: "#f9f9f9",
+    marginBottom: 18,
+    backgroundColor: "#fff",
   },
-  loginButton: {
+  button: {
     width: "100%",
-    backgroundColor: "#6A5ACD", // A nice purple color
-    borderRadius: 10,
-    paddingVertical: 15,
-    marginTop: 10,
-    marginBottom: 15,
+    marginTop: 15,
+    marginBottom: 20,
+    borderRadius: 25,
+    height: 50,
+    justifyContent: 'center',
+  },
+  forgotButton: {
+    marginTop: 15,
+  },
+  footer: {
+    flexDirection: "row",
+    justifyContent: "center",
     alignItems: "center",
+    marginTop: "auto",
+    paddingBottom: 20,
+    flexWrap: "wrap",
   },
-  loginButtonText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  forgotPasswordText: {
-    color: "#6A5ACD",
+  footerLink: {
     fontSize: 14,
-    fontWeight: "500",
-    marginTop: 10,
+    color: "#ffffff",
+    fontFamily: "Poppins_400Regular",
+    textDecorationLine: "underline",
+  },
+  footerSeparator: {
+    fontSize: 14,
+    color: "#ffffff",
+    fontFamily: "Poppins_400Regular",
   },
 });
 

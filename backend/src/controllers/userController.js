@@ -13,7 +13,7 @@ export const register = async (req, res) => {
     }
 
     // Set default role if not provided
-    const userRole = role || "community_health_worker"; // Default role
+    const userRole = role || "umunyabuzima"; // Default role
 
     // Check if user exists (email, phone, or nationalId)
     const existingUser = await User.findOne({
@@ -117,5 +117,15 @@ export const remove = async (req, res) => {
     res.json({ message: "User deleted" });
   } catch (err) {
     res.status(500).json({ message: err.message });
+  }
+};
+
+// Fetch all users
+export const getUsers = async (req, res) => {
+  try {
+    const users = await User.find({}).select('-password'); // Exclude password for security
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };
