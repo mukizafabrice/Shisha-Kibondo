@@ -8,8 +8,13 @@ export const register = async (req, res) => {
     const { name, email, phone, nationalId, role } = req.body;
 
     // Check required fields
-    if (!name || !email || !phone || !nationalId) {
-      return res.status(400).json({ message: "Please provide all fields" });
+    if (!name || !email || !phone) {
+      return res.status(400).json({ message: "Please provide name, email, and phone" });
+    }
+
+    // nationalId is optional for backward compatibility but recommended
+    if (!nationalId) {
+      return res.status(400).json({ message: "National ID is required for new registrations" });
     }
 
     // Set default role if not provided
@@ -80,9 +85,10 @@ export const login = async (req, res) => {
       token,
       user: {
         id: user._id,
-        name: user.name, // <-- Add this line
+        name: user.name,
         email: user.email,
         phone: user.phone,
+        nationalId: user.nationalId,
         role: user.role,
       },
     });
@@ -102,7 +108,17 @@ export const update = async (req, res) => {
     }
     const user = await User.findByIdAndUpdate(id, updates, { new: true });
     if (!user) return res.status(404).json({ message: "User not found" });
-    res.json({ message: "User updated", user });
+    res.json({
+      message: "User updated",
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        nationalId: user.nationalId,
+        role: user.role,
+      }
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

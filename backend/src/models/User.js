@@ -22,8 +22,12 @@ const userSchema = new mongoose.Schema(
     },
     nationalId: {
       type: String,
-      required: [true, "Please add a national ID"],
+      required: function() {
+        // Only require nationalId for new users, not for existing ones
+        return this.isNew;
+      },
       unique: true,
+      sparse: true, // Allow null values for unique index
       trim: true,
     },
     password: {
