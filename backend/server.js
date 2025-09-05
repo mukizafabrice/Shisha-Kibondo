@@ -1,15 +1,14 @@
 import express from "express";
 import dotenv from "dotenv";
-import cors from "cors"; // Import cors
+import cors from "cors";
 import { connectDB } from "./db.js";
 import userRoutes from "./src/routes/userRoutes.js";
 import beneficiaryRoutes from "./src/routes/beneficiaryRoutes.js";
 import distributeToUmunyabuzimaRoutes from "./src/routes/distributeToUmunyabuzimaRoutes.js";
-import {
-  checkBeneficiaryStatus,
-  scheduledStatusUpdate,
-  addCompletionInfo,
-} from "./src/middleware/statusUpdateMiddleware.js";
+import stockRoutes from "./src/routes/stockRoutes.js";
+import productRoutes from "./src/routes/productRoutes.js";
+import mainStockRoutes from "./src/routes/mainStockRoutes.js";
+// All middleware imports and usage removed
 
 dotenv.config();
 
@@ -17,7 +16,7 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // CORS middleware for specific origins
-const allowedOrigins = ["http://192.168.1.105:8081", "http://localhost"];
+const allowedOrigins = ["http://172.20.10.2:8081", "http://localhost:5000"];
 app.use(
   cors({
     origin: allowedOrigins,
@@ -27,10 +26,6 @@ app.use(
 
 app.use(express.json());
 
-// Apply middleware
-app.use(checkBeneficiaryStatus);
-app.use(addCompletionInfo);
-
 app.get("/", (req, res) => {
   res.send("🚀 Server is running successfully!");
 });
@@ -39,16 +34,16 @@ app.get("/", (req, res) => {
 app.use("/api", userRoutes);
 app.use("/api", beneficiaryRoutes);
 app.use("/api", distributeToUmunyabuzimaRoutes);
+app.use("/api/stock", stockRoutes);
+app.use("/api/products", productRoutes);
+app.use("/api/main-stock", mainStockRoutes);
 
 connectDB()
   .then(() => {
     app.listen(PORT, () => {
       console.log(`✅ Server started on http://localhost:${PORT}`);
       console.log("🟢 MongoDB is running and connected!");
-
-      // Initialize scheduled status updates
-      scheduledStatusUpdate();
-      console.log("⏰ Scheduled beneficiary status updates initialized");
+      // Removed scheduledStatusUpdate and related logs
     });
   })
   .catch(() => {

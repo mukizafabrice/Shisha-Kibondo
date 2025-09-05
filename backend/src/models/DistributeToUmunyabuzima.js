@@ -7,6 +7,11 @@ const distributeToUmunyabuzimaSchema = new mongoose.Schema(
       ref: "User",
       required: [true, "Please provide a user ID"],
     },
+    productId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Product", // Make sure you have a Product model
+      required: [true, "Please provide a product ID"],
+    },
     quantity: {
       type: Number,
       required: [true, "Please provide quantity"],
@@ -16,18 +21,9 @@ const distributeToUmunyabuzimaSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Virtual field to get assigned user
-distributeToUmunyabuzimaSchema.virtual('assignedUser', {
-  ref: 'User',
-  localField: 'userId',
-  foreignField: '_id',
-  justOne: true
-});
-
-// Ensure virtual fields are serialized
-distributeToUmunyabuzimaSchema.set('toJSON', { virtuals: true });
-distributeToUmunyabuzimaSchema.set('toObject', { virtuals: true });
-
-const DistributeToUmunyabuzima = mongoose.model("DistributeToUmunyabuzima", distributeToUmunyabuzimaSchema);
+const DistributeToUmunyabuzima = mongoose.model(
+  "DistributeToUmunyabuzima",
+  distributeToUmunyabuzimaSchema
+);
 
 export default DistributeToUmunyabuzima;

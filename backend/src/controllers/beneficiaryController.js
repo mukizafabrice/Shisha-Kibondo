@@ -69,13 +69,13 @@ export const getBeneficiaries = async (req, res) => {
 
     const beneficiaries = await Beneficiaries.find(filter)
       .populate("programDays")
-      .populate("assignedUser", "name email role")
+      .populate("userId", "name email role")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
 
     const total = await Beneficiaries.countDocuments(filter);
-
+    // console.log("Total beneficiaries found:", beneficiaries);
     // Update completion status for all beneficiaries
     // await Beneficiaries.updateCompletedStatuses();
 
@@ -111,7 +111,7 @@ export const getBeneficiary = async (req, res) => {
 
     const beneficiary = await Beneficiaries.findById(id)
       .populate("programDays")
-      .populate("assignedUser", "name email role");
+      .populate("userId", "name email role");
 
     if (!beneficiary) {
       return res.status(404).json({

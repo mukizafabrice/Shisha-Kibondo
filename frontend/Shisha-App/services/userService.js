@@ -36,6 +36,23 @@ const UserService = {
   },
 
   /**
+   * Adds a new user.
+   * @param {object} userData - The user data (name, email, phone, nationalId, role).
+   * @returns {Promise<object>} A promise that resolves with the created user data on success.
+   */
+  addUser: async (userData) => {
+    try {
+      const response = await axiosInstance.post("/users/register", userData);
+      return response.data;
+    } catch (error) {
+      console.error("Add user error:", error.message);
+      throw new Error(
+        error.response?.data?.message || "Failed to add user. Please try again."
+      );
+    }
+  },
+
+  /**
    * Deletes a user by ID.
    * @param {string} id - The user's ID.
    * @returns {Promise<object>} A promise that resolves with a success message on deletion.

@@ -63,8 +63,6 @@ export const register = async (req, res) => {
   }
 };
 
-// Login user (by email or phone)
-// ...existing code...
 export const login = async (req, res) => {
   try {
     const { emailOrPhone, password } = req.body;
@@ -96,7 +94,7 @@ export const login = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
-// ...existing code...
+
 
 // Update user
 export const update = async (req, res) => {

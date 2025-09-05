@@ -1,7 +1,24 @@
 import React from "react";
-import { View, Text, StyleSheet, FlatList, Image } from "react-native";
+import { View, Text, StyleSheet, FlatList, Image, Alert } from "react-native";
+import { Button } from "react-native-paper";
+import { useAuth } from "../../context/AuthContext";
 
 const ReportsScreen = () => {
+  const { logout } = useAuth();
+
+  const handleLogout = () => {
+    Alert.alert("Confirm Logout", "Are you sure you want to logout?", [
+      {
+        text: "Cancel",
+        style: "cancel",
+      },
+      {
+        text: "Logout",
+        style: "destructive",
+        onPress: logout,
+      },
+    ]);
+  };
   const reports = [
     { id: "1", title: "Monthly Health Report", date: "2023-09-01" },
     { id: "2", title: "Community Outreach Summary", date: "2023-08-15" },
@@ -17,14 +34,15 @@ const ReportsScreen = () => {
 
   return (
     <View style={styles.container}>
-      <Image source={require('../../assets/logo.png')} style={styles.logo} />
-      <Text style={styles.title}>Manager Reports</Text>
-      <FlatList
-        data={reports}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
-        style={styles.list}
-      />
+      <Button
+        mode="contained"
+        onPress={handleLogout}
+        style={styles.logoutButton}
+        buttonColor="#e74c3c"
+        icon="logout"
+      >
+        Logout
+      </Button>
     </View>
   );
 };
@@ -72,6 +90,11 @@ const styles = StyleSheet.create({
     height: 100,
     marginBottom: 20,
     borderRadius: 50,
+  },
+  logoutButton: {
+    marginTop: 20,
+    marginHorizontal: 20,
+    backgroundColor: "#e74c3c",
   },
 });
 

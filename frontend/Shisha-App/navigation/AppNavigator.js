@@ -1,52 +1,58 @@
 import React from "react";
+import { View, ActivityIndicator, Alert } from "react-native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import LoginScreen from "../screens/LoginScreen";
-import { View, ActivityIndicator, Text, Alert } from "react-native";
-import { useAuth } from "../context/AuthContext";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { IconButton } from "react-native-paper";
+import { useAuth } from "../context/AuthContext";
 
 // Import screens
+import LoginScreen from "../screens/LoginScreen";
+
+// Manager Screens
 import ManagerHomeScreen from "../screens/Manager/HomeScreen";
-import ManagerProfileScreen from "../screens/Manager/ProfileScreen";
 import ManagerSettingsScreen from "../screens/Manager/SettingsScreen";
 import ManagerReportsScreen from "../screens/Manager/ReportsScreen";
 import ManagerUsersScreen from "../screens/Manager/UsersScreen";
+import BeneficiariesScreen from "../screens/Manager/BeneficiariesScreen";
+import BeneficiaryDetailsScreen from "../screens/Manager/BeneficiaryDetailsScreen";
+import AddBeneficiaryScreen from "../screens/Manager/AddBeneficiaryScreen";
+import AddDistributionScreen from "../screens/Manager/AddDistributionScreen";
+import UserDistributionsScreen from "../screens/Manager/UserDistributionsScreen";
+import StockManagementScreen from "../screens/Manager/StockManagementScreen";
+import ProductsScreen from "../screens/Manager/ProductsScreen";
+import AddProductScreen from "../screens/Manager/AddProductScreen";
 
+// Health Worker Screens
 import HealthWorkerHomeScreen from "../screens/Health_worker/HomeScreen";
-import HealthWorkerProfileScreen from "../screens/Health_worker/ProfileScreen";
 import HealthWorkerSettingsScreen from "../screens/Health_worker/SettingsScreen";
 import HealthWorkerReportsScreen from "../screens/Health_worker/ReportsScreen";
+import StockScreen from "../screens/Health_worker/StockManagementScreen";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
-// Manager Tab Navigator
+// --- Manager Tab Navigator ---
 const ManagerTabNavigator = () => {
   const { logout } = useAuth();
 
-  const handleLogout = () => {
-    Alert.alert(
-      "Logout",
-      "Are you sure you want to logout?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Logout",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await logout();
-              Alert.alert("Success", "Logged out successfully");
-            } catch (error) {
-              Alert.alert("Error", "Failed to logout");
-            }
-          },
-        },
-      ]
-    );
-  };
+  // const handleLogout = () => {
+  //   Alert.alert("Logout", "Are you sure you want to logout?", [
+  //     { text: "Cancel", style: "cancel" },
+  //     {
+  //       text: "Logout",
+  //       style: "destructive",
+  //       onPress: async () => {
+  //         try {
+  //           await logout();
+  //           Alert.alert("Success", "Logged out successfully");
+  //         } catch (error) {
+  //           Alert.alert("Error", "Failed to logout");
+  //         }
+  //       },
+  //     },
+  //   ]);
+  // };
 
   return (
     <Tab.Navigator
@@ -61,7 +67,7 @@ const ManagerTabNavigator = () => {
           paddingTop: 5,
           height: 65,
           elevation: 5,
-          shadowColor: '#000',
+          shadowColor: "#000",
           shadowOffset: { width: 0, height: -2 },
           shadowOpacity: 0.1,
           shadowRadius: 4,
@@ -86,22 +92,30 @@ const ManagerTabNavigator = () => {
         }}
       />
       <Tab.Screen
-        name="Profile"
-        component={ManagerProfileScreen}
+        name="Stock"
+        component={StockManagementScreen}
         options={{
-          tabBarLabel: "Profile",
+          tabBarLabel: "Stock",
           tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="account" color={color} size={size} />
+            <MaterialCommunityIcons
+              name="warehouse"
+              color={color}
+              size={size}
+            />
           ),
         }}
       />
       <Tab.Screen
-        name="Reports"
-        component={ManagerReportsScreen}
+        name="Distribution"
+        component={UserDistributionsScreen}
         options={{
-          tabBarLabel: "Reports",
+          tabBarLabel: "Distribution",
           tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="chart-bar" color={color} size={size} />
+            <MaterialCommunityIcons
+              name="share-variant"
+              color={color}
+              size={size}
+            />
           ),
         }}
       />
@@ -115,44 +129,30 @@ const ManagerTabNavigator = () => {
           ),
         }}
       />
-      <Tab.Screen
-        name="Users"
-        component={ManagerUsersScreen}
-        options={{
-          tabBarLabel: "Users",
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="account-group" color={color} size={size} />
-          ),
-        }}
-      />
     </Tab.Navigator>
   );
 };
 
-// Health Worker Tab Navigator
+// --- Health Worker Tab Navigator ---
 const HealthWorkerTabNavigator = () => {
   const { logout } = useAuth();
 
   const handleLogout = () => {
-    Alert.alert(
-      "Logout",
-      "Are you sure you want to logout?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Logout",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await logout();
-              Alert.alert("Success", "Logged out successfully");
-            } catch (error) {
-              Alert.alert("Error", "Failed to logout");
-            }
-          },
+    Alert.alert("Logout", "Are you sure you want to logout?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Logout",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await logout();
+            Alert.alert("Success", "Logged out successfully");
+          } catch (error) {
+            Alert.alert("Error", "Failed to logout");
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   return (
@@ -168,7 +168,7 @@ const HealthWorkerTabNavigator = () => {
           paddingTop: 5,
           height: 65,
           elevation: 5,
-          shadowColor: '#000',
+          shadowColor: "#000",
           shadowOffset: { width: 0, height: -2 },
           shadowOpacity: 0.1,
           shadowRadius: 4,
@@ -180,22 +180,6 @@ const HealthWorkerTabNavigator = () => {
         headerTitleStyle: {
           fontWeight: "bold",
         },
-        headerRight: () => (
-          <IconButton
-            icon="logout"
-            size={24}
-            onPress={handleLogout}
-            color="#e74c3c"
-          />
-        ),
-        headerRight: () => (
-          <IconButton
-            icon="logout"
-            size={24}
-            onPress={handleLogout}
-            color="#e74c3c"
-          />
-        ),
       }}
     >
       <Tab.Screen
@@ -209,12 +193,16 @@ const HealthWorkerTabNavigator = () => {
         }}
       />
       <Tab.Screen
-        name="Profile"
-        component={HealthWorkerProfileScreen}
+        name="Stock"
+        component={StockScreen}
         options={{
-          tabBarLabel: "Profile",
+          tabBarLabel: "Stock",
           tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="account" color={color} size={size} />
+            <MaterialCommunityIcons
+              name="warehouse"
+              color={color}
+              size={size}
+            />
           ),
         }}
       />
@@ -222,9 +210,13 @@ const HealthWorkerTabNavigator = () => {
         name="Reports"
         component={HealthWorkerReportsScreen}
         options={{
-          tabBarLabel: "Reports",
+          tabBarLabel: "Distribution",
           tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="chart-bar" color={color} size={size} />
+            <MaterialCommunityIcons
+              name="share-variant"
+              color={color}
+              size={size}
+            />
           ),
         }}
       />
@@ -242,6 +234,7 @@ const HealthWorkerTabNavigator = () => {
   );
 };
 
+// --- App Navigator ---
 const AppNavigator = () => {
   const { user, isLoading } = useAuth();
 
@@ -262,21 +255,71 @@ const AppNavigator = () => {
           options={{ headerShown: false }}
         />
       ) : user.role === "manager" ? (
-        <Stack.Screen
-          name="ManagerTabs"
-          component={ManagerTabNavigator}
-          options={{ headerShown: false }}
-        />
-      ) : user.role === "umunyabuzima" ? (
+        <>
+          {/* Main Tabs */}
+          <Stack.Screen
+            name="ManagerTabs"
+            component={ManagerTabNavigator}
+            options={{ headerShown: false }}
+          />
+
+          {/* Stack Screens not in tab */}
+          <Stack.Screen
+            name="Users"
+            component={ManagerUsersScreen}
+            options={{ title: "Users" }}
+          />
+          <Stack.Screen
+            name="Beneficiaries"
+            component={BeneficiariesScreen}
+            options={{ title: "Beneficiaries" }}
+          />
+          <Stack.Screen
+            name="BeneficiaryDetails"
+            component={BeneficiaryDetailsScreen}
+            options={{ title: "Beneficiary Details" }}
+          />
+          <Stack.Screen
+            name="AddBeneficiary"
+            component={AddBeneficiaryScreen}
+            options={{ title: "Add Beneficiary", presentation: "modal" }}
+          />
+          <Stack.Screen
+            name="AddDistribution"
+            component={AddDistributionScreen}
+            options={{ title: "Create Distribution", presentation: "modal" }}
+          />
+          <Stack.Screen
+            name="UserDistributions"
+            component={UserDistributionsScreen}
+            options={{ title: "User Distributions" }}
+          />
+          <Stack.Screen
+            name="ProductsScreen"
+            component={ProductsScreen}
+            options={{
+              title: "Products",
+              headerStyle: { backgroundColor: "#007AFF" },
+              headerTintColor: "#fff",
+              headerTitleStyle: { fontWeight: "bold" },
+            }}
+          />
+          <Stack.Screen
+            name="AddProduct" // match the navigate call
+            component={AddProductScreen}
+            options={{
+              title: "Add Product",
+              headerStyle: { backgroundColor: "#007AFF" },
+              headerTintColor: "#fff",
+              headerTitleStyle: { fontWeight: "bold" },
+              presentation: "modal",
+            }}
+          />
+        </>
+      ) : (
         <Stack.Screen
           name="HealthWorkerTabs"
           component={HealthWorkerTabNavigator}
-          options={{ headerShown: false }}
-        />
-      ) : (
-        <Stack.Screen
-          name="Login"
-          component={LoginScreen}
           options={{ headerShown: false }}
         />
       )}

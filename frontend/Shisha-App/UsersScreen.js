@@ -150,7 +150,7 @@ const UsersScreen = ({ navigation }) => {
   };
 
   const handleSelectUser = (userId) => {
-    setSelectedUser((prev) => (prev === userId ? null : userId));
+    setSelectedUser(prev => prev === userId ? null : userId);
   };
 
   const handleSelectAll = () => {
@@ -169,27 +169,22 @@ const UsersScreen = ({ navigation }) => {
 
   const handleAssignBeneficiaries = () => {
     if (selectedUser) {
-      navigation.navigate("Beneficiaries", { userId: selectedUser });
+      navigation.navigate('Beneficiaries', { userId: selectedUser });
     }
   };
 
   const handleDistribute = () => {
     if (selectedUser) {
-      const selectedUserData = users.find((user) => user._id === selectedUser);
-      navigation.navigate("UserDistributions", {
+      const selectedUserData = users.find(user => user._id === selectedUser);
+      navigation.navigate('UserDistributions', {
         userId: selectedUser,
-        userName: selectedUserData?.name || "Unknown User",
+        userName: selectedUserData?.name || 'Unknown User'
       });
     }
   };
 
   const handleAddUserSubmit = async () => {
-    if (
-      !newUser.name ||
-      !newUser.email ||
-      !newUser.phone ||
-      !newUser.nationalId
-    ) {
+    if (!newUser.name || !newUser.email || !newUser.phone || !newUser.nationalId) {
       Alert.alert("Error", "Please fill in all required fields");
       return;
     }
@@ -234,6 +229,7 @@ const UsersScreen = ({ navigation }) => {
     });
   };
 
+
   const roles = ["All", "manager", "umunyabuzima"];
 
   const renderPagination = () => (
@@ -266,7 +262,7 @@ const UsersScreen = ({ navigation }) => {
     <View style={styles.tableHeader}>
       <View style={[styles.checkboxColumn]}>
         <Checkbox
-          status={selectedUser ? "checked" : "unchecked"}
+          status={selectedUser ? 'checked' : 'unchecked'}
           onPress={handleSelectAll}
           color="#007AFF"
         />
@@ -283,6 +279,7 @@ const UsersScreen = ({ navigation }) => {
   );
 
   const renderUser = ({ item, index }) => {
+    console.log("renderUser called for:", item.name, "at index:", index);
     return (
       <View
         style={[
@@ -352,23 +349,20 @@ const UsersScreen = ({ navigation }) => {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.keyboardAvoidingView}
-      behavior="padding"
-    >
+    <KeyboardAvoidingView style={styles.keyboardAvoidingView} behavior="padding">
       <Surface style={styles.container}>
         {/* Action Buttons */}
         <Card style={styles.buttonsCard}>
           <Card.Content>
             <View style={styles.buttonsContainer}>
-              <Button
-                icon="account-plus"
-                mode="contained"
-                onPress={handleAddUsers}
-                style={styles.button}
-                buttonColor="#007AFF"
-              >
+              <Button icon="account-plus" mode="contained" onPress={handleAddUsers} style={styles.button} buttonColor="#007AFF">
                 Add Users
+              </Button>
+              <Button icon="account-multiple-plus" mode="contained" onPress={handleAssignBeneficiaries} style={styles.button} buttonColor="#28a745" disabled={!selectedUser}>
+                Assign Beneficiaries
+              </Button>
+              <Button icon="share-variant" mode="contained" onPress={handleDistribute} style={styles.button} buttonColor="#ff9800" disabled={!selectedUser}>
+                Distribute
               </Button>
             </View>
           </Card.Content>
@@ -393,13 +387,10 @@ const UsersScreen = ({ navigation }) => {
                       />
                     ) : null
                   }
-                  style={[
-                    styles.searchInput,
-                    searchFocused && styles.searchInputFocused,
-                  ]}
+                  style={[styles.searchInput, searchFocused && styles.searchInputFocused]}
                   placeholder="Search users..."
                   dense={true}
-                  theme={{ colors: { primary: "#007AFF" } }}
+                  theme={{ colors: { primary: '#007AFF' } }}
                   onFocus={() => setSearchFocused(true)}
                   onBlur={() => setSearchFocused(false)}
                 />
@@ -456,6 +447,13 @@ const UsersScreen = ({ navigation }) => {
                       index % 2 === 0 ? styles.evenRow : styles.oddRow,
                     ]}
                   >
+                    <View style={[styles.checkboxColumn]}>
+                      <Checkbox
+                        status={selectedUser === item._id ? 'checked' : 'unchecked'}
+                        onPress={() => handleSelectUser(item._id)}
+                        color="#007AFF"
+                      />
+                    </View>
                     <Text
                       style={[styles.cellText, styles.nameColumn]}
                       numberOfLines={1}
@@ -540,59 +538,49 @@ const UsersScreen = ({ navigation }) => {
                 <TextInput
                   label="Name *"
                   value={newUser.name}
-                  onChangeText={(text) =>
-                    setNewUser({ ...newUser, name: text })
-                  }
+                  onChangeText={(text) => setNewUser({ ...newUser, name: text })}
                   mode="outlined"
                   style={styles.input}
-                  theme={{ colors: { primary: "#007AFF" } }}
+                  theme={{ colors: { primary: '#007AFF' } }}
                 />
 
                 <TextInput
                   label="Email *"
                   value={newUser.email}
-                  onChangeText={(text) =>
-                    setNewUser({ ...newUser, email: text })
-                  }
+                  onChangeText={(text) => setNewUser({ ...newUser, email: text })}
                   mode="outlined"
                   keyboardType="email-address"
                   autoCapitalize="none"
                   style={styles.input}
-                  theme={{ colors: { primary: "#007AFF" } }}
+                  theme={{ colors: { primary: '#007AFF' } }}
                 />
 
                 <TextInput
                   label="Phone *"
                   value={newUser.phone}
-                  onChangeText={(text) =>
-                    setNewUser({ ...newUser, phone: text })
-                  }
+                  onChangeText={(text) => setNewUser({ ...newUser, phone: text })}
                   mode="outlined"
                   keyboardType="phone-pad"
                   style={styles.input}
-                  theme={{ colors: { primary: "#007AFF" } }}
+                  theme={{ colors: { primary: '#007AFF' } }}
                 />
 
                 <TextInput
                   label="National ID *"
                   value={newUser.nationalId}
-                  onChangeText={(text) =>
-                    setNewUser({ ...newUser, nationalId: text })
-                  }
+                  onChangeText={(text) => setNewUser({ ...newUser, nationalId: text })}
                   mode="outlined"
                   style={styles.input}
-                  theme={{ colors: { primary: "#007AFF" } }}
+                  theme={{ colors: { primary: '#007AFF' } }}
                 />
 
                 <TextInput
                   label="Role"
                   value={newUser.role}
-                  onChangeText={(text) =>
-                    setNewUser({ ...newUser, role: text })
-                  }
+                  onChangeText={(text) => setNewUser({ ...newUser, role: text })}
                   mode="outlined"
                   style={styles.input}
-                  theme={{ colors: { primary: "#007AFF" } }}
+                  theme={{ colors: { primary: '#007AFF' } }}
                 />
               </ScrollView>
 
@@ -614,12 +602,9 @@ const UsersScreen = ({ navigation }) => {
                   buttonColor="#007AFF"
                 >
                   {addingUser
-                    ? isEditMode
-                      ? "Updating..."
-                      : "Adding..."
-                    : isEditMode
-                    ? "Update User"
-                    : "Add User"}
+                    ? (isEditMode ? "Updating..." : "Adding...")
+                    : (isEditMode ? "Update User" : "Add User")
+                  }
                 </Button>
               </View>
             </View>
