@@ -40,3 +40,4 @@ export const deleteStock = async (id) => {
     throw error.response?.data || { message: error.message };
   }
 };
+

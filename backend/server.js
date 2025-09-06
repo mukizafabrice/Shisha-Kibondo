@@ -33,7 +33,7 @@ app.get("/", (req, res) => {
 // Apply API routes
 app.use("/api", userRoutes);
 app.use("/api", beneficiaryRoutes);
-app.use("/api", distributeToUmunyabuzimaRoutes);
+app.use("/api/distibute-umunyabuzima", distributeToUmunyabuzimaRoutes);
 app.use("/api/stock", stockRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/main-stock", mainStockRoutes);
