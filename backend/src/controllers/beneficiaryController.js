@@ -120,9 +120,32 @@ export const getBeneficiary = async (req, res) => {
       });
     }
 
-    // Check and update completion status
-    // beneficiary.checkProgramCompletion();
-    // await beneficiary.save();
+    res.status(200).json({
+      success: true,
+      data: beneficiary,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const getBeneficiaryByUserId = async (req, res) => {
+  try {
+    const { usedId } = req.params;
+
+    const beneficiary = await Beneficiaries.find({ userId: usedId })
+      .populate("programDays")
+      .populate("userId", "name email role");
+
+    if (!beneficiary) {
+      return res.status(404).json({
+        success: false,
+        message: "Beneficiary not found",
+      });
+    }
 
     res.status(200).json({
       success: true,

@@ -30,7 +30,7 @@ export const updateMainStock = async (id, stockData) => {
   }
 };
 
-// Delete a main stock by ID
+// (Optional) Delete stock
 export const deleteMainStock = async (id) => {
   try {
     const response = await axiosInstance.delete(`/main-stock/${id}`);

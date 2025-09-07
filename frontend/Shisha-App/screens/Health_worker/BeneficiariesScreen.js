@@ -60,20 +60,28 @@ const BeneficiariesScreen = ({ navigation, route }) => {
 
     // Filter by status
     if (selectedStatus !== "All") {
-      filtered = filtered.filter((beneficiary) => beneficiary.status === selectedStatus);
+      filtered = filtered.filter(
+        (beneficiary) => beneficiary.status === selectedStatus
+      );
     }
 
     // Filter by type
     if (selectedType !== "All") {
-      filtered = filtered.filter((beneficiary) => beneficiary.type === selectedType);
+      filtered = filtered.filter(
+        (beneficiary) => beneficiary.type === selectedType
+      );
     }
 
     // Search by name, national ID, or village
     if (searchQuery.trim()) {
       filtered = filtered.filter(
         (beneficiary) =>
-          `${beneficiary.firstName} ${beneficiary.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          beneficiary.nationalId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          `${beneficiary.firstName} ${beneficiary.lastName}`
+            .toLowerCase()
+            .includes(searchQuery.toLowerCase()) ||
+          beneficiary.nationalId
+            .toLowerCase()
+            .includes(searchQuery.toLowerCase()) ||
           beneficiary.village.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
@@ -96,8 +104,8 @@ const BeneficiariesScreen = ({ navigation, route }) => {
 
   const fetchBeneficiaries = async () => {
     try {
-      const params = userId ? { userId } : {};
-      const data = await BeneficiaryService.getBeneficiaries(params);
+     
+      const data = await BeneficiaryService.getBeneficiariesByUser();
       console.log("Fetched beneficiaries:", data);
       setBeneficiaries(data.data || []);
     } catch (error) {
@@ -108,24 +116,31 @@ const BeneficiariesScreen = ({ navigation, route }) => {
     }
   };
 
-
   const handleDelete = async (beneficiaryId) => {
-    Alert.alert("Delete Beneficiary", "Are you sure you want to delete this beneficiary?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await BeneficiaryService.deleteBeneficiary(beneficiaryId);
-            setBeneficiaries(beneficiaries.filter((beneficiary) => beneficiary._id !== beneficiaryId));
-            Alert.alert("Success", "Beneficiary deleted successfully");
-          } catch (error) {
-            Alert.alert("Error", error.message);
-          }
+    Alert.alert(
+      "Delete Beneficiary",
+      "Are you sure you want to delete this beneficiary?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await BeneficiaryService.deleteBeneficiary(beneficiaryId);
+              setBeneficiaries(
+                beneficiaries.filter(
+                  (beneficiary) => beneficiary._id !== beneficiaryId
+                )
+              );
+              Alert.alert("Success", "Beneficiary deleted successfully");
+            } catch (error) {
+              Alert.alert("Error", error.message);
+            }
+          },
         },
-      },
-    ]);
+      ]
+    );
   };
 
   const handleEdit = (beneficiary) => {
@@ -134,37 +149,43 @@ const BeneficiariesScreen = ({ navigation, route }) => {
 
   // Refresh beneficiaries when returning from edit screen
   React.useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', () => {
+    const unsubscribe = navigation.addListener("focus", () => {
       fetchBeneficiaries();
     });
     return unsubscribe;
   }, [navigation]);
 
   const handleViewDetails = (beneficiary) => {
-    navigation.navigate("BeneficiaryDetails", { beneficiaryId: beneficiary._id });
+    navigation.navigate("BeneficiaryDetails", {
+      beneficiaryId: beneficiary._id,
+    });
   };
-
 
   const handleAddBeneficiary = () => {
     navigation.navigate("AddBeneficiary", { userId });
   };
 
-
-
   const getStatusColor = (status) => {
     switch (status) {
-      case "active": return "#28a745";
-      case "inactive": return "#6c757d";
-      default: return "#6c757d";
+      case "active":
+        return "#28a745";
+      case "inactive":
+        return "#6c757d";
+      default:
+        return "#6c757d";
     }
   };
 
   const getTypeColor = (type) => {
     switch (type) {
-      case "pregnant": return "#e91e63";
-      case "breastfeeding": return "#ff9800";
-      case "child": return "#4caf50";
-      default: return "#6c757d";
+      case "pregnant":
+        return "#e91e63";
+      case "breastfeeding":
+        return "#ff9800";
+      case "child":
+        return "#4caf50";
+      default:
+        return "#6c757d";
     }
   };
 
@@ -196,7 +217,6 @@ const BeneficiariesScreen = ({ navigation, route }) => {
       </Button>
     </View>
   );
-
 
   const renderHeader = () => (
     <View style={styles.tableHeader}>
@@ -288,25 +308,13 @@ const BeneficiariesScreen = ({ navigation, route }) => {
   }
 
   return (
-    <KeyboardAvoidingView style={styles.keyboardAvoidingView} behavior="padding">
-
+    <KeyboardAvoidingView
+      style={styles.keyboardAvoidingView}
+      behavior="padding"
+    >
       <Surface style={styles.container}>
         {/* Action Buttons */}
-        <Card style={styles.buttonsCard}>
-          <Card.Content>
-            <View style={styles.buttonsContainer}>
-              <Button
-                icon="account-plus"
-                mode="contained"
-                onPress={handleAddBeneficiary}
-                style={styles.button}
-                buttonColor="#007AFF"
-              >
-                Add Beneficiary
-              </Button>
-            </View>
-          </Card.Content>
-        </Card>
+     
 
         {/* Search and Filter Controls */}
         <Card style={styles.controlsCard}>
@@ -326,10 +334,13 @@ const BeneficiariesScreen = ({ navigation, route }) => {
                     />
                   ) : null
                 }
-                style={[styles.searchInput, searchFocused && styles.searchInputFocused]}
+                style={[
+                  styles.searchInput,
+                  searchFocused && styles.searchInputFocused,
+                ]}
                 placeholder="Search beneficiaries..."
                 dense={true}
-                theme={{ colors: { primary: '#007AFF' } }}
+                theme={{ colors: { primary: "#007AFF" } }}
                 onFocus={() => setSearchFocused(true)}
                 onBlur={() => setSearchFocused(false)}
               />
@@ -345,7 +356,9 @@ const BeneficiariesScreen = ({ navigation, route }) => {
                     selected={selectedStatus === status}
                     onPress={() => setSelectedStatus(status)}
                     style={
-                      selectedStatus === status ? styles.selectedChip : styles.chip
+                      selectedStatus === status
+                        ? styles.selectedChip
+                        : styles.chip
                     }
                     compact={true}
                   >
@@ -381,7 +394,8 @@ const BeneficiariesScreen = ({ navigation, route }) => {
         <Card style={styles.summaryCard}>
           <Card.Content>
             <Text style={styles.resultsText}>
-              Showing {paginatedBeneficiaries.length} of {filteredBeneficiaries.length} beneficiaries
+              Showing {paginatedBeneficiaries.length} of{" "}
+              {filteredBeneficiaries.length} beneficiaries
             </Text>
           </Card.Content>
         </Card>

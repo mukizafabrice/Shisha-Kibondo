@@ -3,6 +3,7 @@ import {
   createBeneficiary,
   getBeneficiaries,
   getBeneficiary,
+  getBeneficiaryByUserId,
   updateBeneficiary,
   deleteBeneficiary,
   addProgramDay,
@@ -17,6 +18,7 @@ const router = express.Router();
 // Beneficiary CRUD routes
 router.post("/beneficiaries", createBeneficiary);
 router.get("/beneficiaries", getBeneficiaries);
+router.get("/beneficiaries/:userId", getBeneficiaryByUserId);
 router.get("/beneficiaries/stats", getBeneficiaryStats);
 router.get("/beneficiaries/user/:userId", getBeneficiaries); // Get beneficiaries by user ID
 router.get("/beneficiaries/:id", getBeneficiary);
@@ -26,7 +28,10 @@ router.delete("/beneficiaries/:id", deleteBeneficiary);
 // Program day management routes
 router.post("/beneficiaries/:beneficiaryId/days", addProgramDay);
 router.get("/beneficiaries/:beneficiaryId/days", getProgramDays);
-router.put("/beneficiaries/:beneficiaryId/days/:dayId", updateProgramDayAttendance);
+router.put(
+  "/beneficiaries/:beneficiaryId/days/:dayId",
+  updateProgramDayAttendance
+);
 router.delete("/beneficiaries/:beneficiaryId/days/:dayId", removeProgramDay);
 
 export default router;

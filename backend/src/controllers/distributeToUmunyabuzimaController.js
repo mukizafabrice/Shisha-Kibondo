@@ -1,6 +1,7 @@
 import DistributeToUmunyabuzima from "../models/DistributeToUmunyabuzima.js";
 import MainStock from "../models/MainStock.js";
 import Stock from "../models/Stock.js";
+import MainStockTransaction from "../models/MainStockTransaction.js";
 import mongoose from "mongoose";
 
 // Create a new distribution record
@@ -57,11 +58,11 @@ export const createDistribution = async (req, res) => {
     });
     await distribution.save();
 
-    // Populate user and product for response
-    await distribution
-      .populate("userId", "name email role")
-      .populate("productId", "name description");
-
+    const transaction = await MainStockTransaction.create({
+      productId: productId,
+      totalStock: quantity,
+      type: "OUT",
+    });
     res.status(201).json({
       success: true,
       message: "Distribution created and stock updated successfully",

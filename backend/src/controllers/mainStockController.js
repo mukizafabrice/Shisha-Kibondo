@@ -77,10 +77,6 @@ export const getMainStocks = async (req, res) => {
       .populate("productId", "name description") // populate product fields
       .sort({ createdAt: -1 });
 
-    if (!mainStock || mainStock.length === 0) {
-      return res.status(404).json({ message: "No main stock found" });
-    }
-
     res.json(mainStock);
   } catch (error) {
     res.status(500).json({ message: error.message });

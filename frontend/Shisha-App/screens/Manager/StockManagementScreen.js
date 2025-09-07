@@ -17,6 +17,7 @@ import {
   Modal,
   ActivityIndicator,
   Menu,
+  IconButton,
 } from "react-native-paper";
 import {
   useFonts,
@@ -29,8 +30,11 @@ import { useAuth } from "../../context/AuthContext";
 import {
   getAllMainStock,
   createMainStock,
+  updateMainStock,
+  deleteMainStock,
 } from "../../services/mainStockService";
 import { getAllProducts } from "../../services/ProductService";
+import { useNavigation } from "@react-navigation/native";
 
 const { width } = Dimensions.get("window");
 const isDesktop = width > 768;
@@ -38,6 +42,7 @@ const isDesktop = width > 768;
 const COLUMNS = [
   { id: "product", label: "Product", flex: 3 },
   { id: "totalStock", label: "Total Stock", flex: 2 },
+  { id: "actions", label: "Actions", flex: 2 },
 ];
 
 const StockManagementScreen = () => {
@@ -57,10 +62,15 @@ const StockManagementScreen = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  // Modal & form
+  // Modals & form states
   const [addStockModalVisible, setAddStockModalVisible] = useState(false);
+  const [editStockModalVisible, setEditStockModalVisible] = useState(false);
   const [productMenuVisible, setProductMenuVisible] = useState(false);
+
   const [stockForm, setStockForm] = useState({ productId: "", totalStock: "" });
+  const [editingStockId, setEditingStockId] = useState(null);
+
+  const navigation = useNavigation();
 
   useEffect(() => {
     fetchAll();
@@ -87,41 +97,23 @@ const StockManagementScreen = () => {
     setRefreshing(false);
   };
 
-  // Filter stock by product name
-  const filteredStock = useMemo(() => {
-    if (!searchQuery.trim()) return mainStock;
+  const resetStockForm = () => {
+    setStockForm({ productId: "", totalStock: "" });
+    setEditingStockId(null);
+  };
 
-    return mainStock.filter((stock) => {
-      const product = products.find((p) => p._id === stock.productId);
-      return product?.name.toLowerCase().includes(searchQuery.toLowerCase());
-    });
-  }, [mainStock, searchQuery, products]);
-
-  // Pagination
-  const paginatedStock = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return filteredStock.slice(start, start + itemsPerPage);
-  }, [filteredStock, currentPage]);
-
-  const totalPages = Math.ceil(filteredStock.length / itemsPerPage);
-
-  const resetStockForm = () => setStockForm({ productId: "", totalStock: "" });
-
+  // --- Add Stock ---
   const handleAddStock = async () => {
     if (!stockForm.productId || !stockForm.totalStock) {
       Alert.alert("Validation Error", "Product and total stock are required.");
       return;
     }
-
     try {
       const stockData = {
         productId: stockForm.productId,
         totalStock: parseFloat(stockForm.totalStock),
       };
-
-      console.log("Submitting stock:", stockData); // Debug
       await createMainStock(stockData);
-
       Alert.alert("Success", "Stock added!");
       setAddStockModalVisible(false);
       resetStockForm();
@@ -132,6 +124,80 @@ const StockManagementScreen = () => {
       Alert.alert("Error", msg);
     }
   };
+
+  // --- Edit Stock ---
+  const openEditModal = (item) => {
+    setStockForm({
+      productId: item.productId,
+      totalStock: String(item.totalStock),
+    });
+    setEditingStockId(item._id);
+    setEditStockModalVisible(true);
+  };
+
+  const handleUpdateStock = async () => {
+    if (!stockForm.productId || !stockForm.totalStock) {
+      Alert.alert("Validation Error", "Product and total stock are required.");
+      return;
+    }
+    try {
+      const stockData = {
+        productId: stockForm.productId,
+        totalStock: parseFloat(stockForm.totalStock),
+      };
+      await updateMainStock(editingStockId, stockData);
+      Alert.alert("Success", "Stock updated!");
+      setEditStockModalVisible(false);
+      resetStockForm();
+      fetchAll();
+    } catch (error) {
+      console.error(error);
+      const msg = error.response?.data?.message || "Failed to update stock.";
+      Alert.alert("Error", msg);
+    }
+  };
+
+  // --- Delete Stock ---
+  const handleDeleteStock = async (id) => {
+    Alert.alert(
+      "Confirm Delete",
+      "Are you sure you want to delete this stock?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteMainStock(id);
+              Alert.alert("Deleted", "Stock has been deleted.");
+              // Refresh the table
+              fetchAll(); // <-- this reloads your stock list
+            } catch (error) {
+              console.error(error);
+              Alert.alert("Error", error.message || "Failed to delete stock.");
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  // --- Filter & Pagination ---
+  const filteredStock = useMemo(() => {
+    if (!searchQuery.trim()) return mainStock;
+    return mainStock.filter((stock) => {
+      const product = products.find((p) => p._id === stock.productId);
+      return product?.name.toLowerCase().includes(searchQuery.toLowerCase());
+    });
+  }, [mainStock, searchQuery, products]);
+
+  const paginatedStock = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredStock.slice(start, start + itemsPerPage);
+  }, [filteredStock, currentPage]);
+
+  const totalPages = Math.ceil(filteredStock.length / itemsPerPage);
 
   const renderTableHeader = () => (
     <View style={styles.tableHeader}>
@@ -161,6 +227,20 @@ const StockManagementScreen = () => {
         <Text style={[styles.cellText, { flex: 2, textAlign: "center" }]}>
           {item.totalStock}
         </Text>
+        <View style={[styles.cell, { flex: 2, justifyContent: "center" }]}>
+          <IconButton
+            icon="pencil"
+            size={20}
+            iconColor="#007AFF"
+            onPress={() => openEditModal(item)}
+          />
+          <IconButton
+            icon="delete"
+            size={20}
+            iconColor="#E63946"
+            onPress={() => handleDeleteStock(item._id)}
+          />
+        </View>
       </View>
     );
   };
@@ -184,11 +264,10 @@ const StockManagementScreen = () => {
         </View>
       </Card>
 
-      {/* Controls & Search */}
+      {/* Controls */}
       <Card style={styles.controlsCard}>
         <Card.Content>
           <View style={styles.controlsHeader}>
-            <Text style={styles.sectionTitle}>Stock Inventory</Text>
             <Button
               mode="contained"
               onPress={() => setAddStockModalVisible(true)}
@@ -196,6 +275,14 @@ const StockManagementScreen = () => {
               icon="plus"
             >
               Add Stock
+            </Button>
+            <Button
+              mode="contained"
+              onPress={() => navigation.navigate("StockTransactions")}
+              style={styles.transactionButton}
+              icon="eye"
+            >
+              Transactions
             </Button>
           </View>
           <TextInput
@@ -268,6 +355,81 @@ const StockManagementScreen = () => {
         >
           <Text style={styles.modalTitle}>Add New Stock</Text>
           <ScrollView>
+            {/* Product selector */}
+            <Menu
+              visible={productMenuVisible}
+              onDismiss={() => setProductMenuVisible(false)}
+              anchor={
+                <TextInput
+                  label="Select Product"
+                  value={
+                    products.find((p) => p._id === stockForm.productId)?.name ||
+                    ""
+                  }
+                  mode="outlined"
+                  right={<TextInput.Icon icon="menu-down" />}
+                  style={styles.modalInput}
+                  onPressIn={() => setProductMenuVisible(true)}
+                />
+              }
+            >
+              {products.map((product) => (
+                <Menu.Item
+                  key={product._id}
+                  title={product.name}
+                  onPress={() => {
+                    setStockForm((prev) => ({
+                      ...prev,
+                      productId: product._id,
+                    }));
+                    setProductMenuVisible(false);
+                  }}
+                />
+              ))}
+            </Menu>
+
+            {/* Total stock input */}
+            <TextInput
+              label="Total Stock"
+              value={stockForm.totalStock}
+              onChangeText={(val) =>
+                setStockForm((prev) => ({ ...prev, totalStock: val }))
+              }
+              mode="outlined"
+              keyboardType="numeric"
+              style={styles.modalInput}
+            />
+          </ScrollView>
+
+          {/* Actions */}
+          <View style={styles.modalActions}>
+            <Button
+              mode="outlined"
+              onPress={() => setAddStockModalVisible(false)}
+              style={styles.modalButton}
+            >
+              Cancel
+            </Button>
+            <Button
+              mode="contained"
+              onPress={handleAddStock}
+              style={styles.modalButton}
+            >
+              Add Stock
+            </Button>
+          </View>
+        </Modal>
+      </Portal>
+
+      {/* Edit Stock Modal */}
+      <Portal>
+        <Modal
+          visible={editStockModalVisible}
+          onDismiss={() => setEditStockModalVisible(false)}
+          contentContainerStyle={styles.modalContainer}
+        >
+          <Text style={styles.modalTitle}>Edit Stock</Text>
+          <ScrollView>
             <Menu
               visible={productMenuVisible}
               onDismiss={() => setProductMenuVisible(false)}
@@ -311,21 +473,20 @@ const StockManagementScreen = () => {
               style={styles.modalInput}
             />
           </ScrollView>
-
           <View style={styles.modalActions}>
             <Button
               mode="outlined"
-              onPress={() => setAddStockModalVisible(false)}
+              onPress={() => setEditStockModalVisible(false)}
               style={styles.modalButton}
             >
               Cancel
             </Button>
             <Button
               mode="contained"
-              onPress={handleAddStock}
+              onPress={handleUpdateStock}
               style={styles.modalButton}
             >
-              Add Stock
+              Update Stock
             </Button>
           </View>
         </Modal>
@@ -366,15 +527,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 16,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontFamily: "Poppins_600SemiBold",
-    color: "#2c3e50",
-  },
   addButton: { backgroundColor: "#007AFF" },
+  transactionButton: { backgroundColor: "#008000" },
   searchInput: { marginBottom: 8, backgroundColor: "#fff" },
   tableCard: { flex: 1, elevation: 2, marginBottom: 16, borderRadius: 8 },
-  tableWrapper: { minWidth: 500, backgroundColor: "#fff" },
+  tableWrapper: { minWidth: 380, backgroundColor: "#fff" },
   tableHeader: {
     flexDirection: "row",
     backgroundColor: "#2c3e50",
@@ -391,7 +548,7 @@ const styles = StyleSheet.create({
   },
   tableRow: {
     flexDirection: "row",
-    paddingVertical: 10,
+    paddingVertical: 20,
     paddingHorizontal: 15,
     borderBottomWidth: 1,
     borderBottomColor: "#e0e4e8",

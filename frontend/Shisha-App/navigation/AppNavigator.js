@@ -22,12 +22,13 @@ import UserDistributionsScreen from "../screens/Manager/UserDistributionsScreen"
 import StockManagementScreen from "../screens/Manager/StockManagementScreen";
 import ProductsScreen from "../screens/Manager/ProductsScreen";
 import AddProductScreen from "../screens/Manager/AddProductScreen";
-
+import StockTransactionsScreen from "../screens/Manager/StockTransactionsScreen";
 // Health Worker Screens
 import HealthWorkerHomeScreen from "../screens/Health_worker/HomeScreen";
 import HealthWorkerSettingsScreen from "../screens/Health_worker/SettingsScreen";
 import HealthWorkerReportsScreen from "../screens/Health_worker/ReportsScreen";
 import StockScreen from "../screens/Health_worker/StockManagementScreen";
+import HealthBeneficiariesScreen from "../screens/Health_worker/BeneficiariesScreen";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -267,7 +268,12 @@ const AppNavigator = () => {
           <Stack.Screen
             name="Users"
             component={ManagerUsersScreen}
-            options={{ title: "Users" }}
+            options={{
+              title: "Users",
+              headerStyle: { backgroundColor: "#007AFF" },
+              headerTintColor: "#fff",
+              headerTitleStyle: { fontWeight: "bold" },
+            }}
           />
           <Stack.Screen
             name="Beneficiaries"
@@ -315,13 +321,35 @@ const AppNavigator = () => {
               presentation: "modal",
             }}
           />
+          <Stack.Screen
+            name="StockTransactions"
+            component={StockTransactionsScreen}
+            options={{
+              title: "Stock Transactions",
+              headerStyle: { backgroundColor: "#007AFF" },
+              headerTintColor: "#fff",
+              headerTitleStyle: { fontWeight: "bold" },
+            }}
+          />
         </>
       ) : (
-        <Stack.Screen
-          name="HealthWorkerTabs"
-          component={HealthWorkerTabNavigator}
-          options={{ headerShown: false }}
-        />
+        <>
+          <Stack.Screen
+            name="HealthWorkerTabs"
+            component={HealthWorkerTabNavigator}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="health-Beneficiaries"
+            component={HealthBeneficiariesScreen}
+            options={{
+              title: "Beneficiaries",
+              headerStyle: { backgroundColor: "#007AFF" },
+              headerTintColor: "#fff",
+              headerTitleStyle: { fontWeight: "bold" },
+            }}
+          />
+        </>
       )}
     </Stack.Navigator>
   );

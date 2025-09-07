@@ -134,7 +134,7 @@ const SettingsScreen = ({ navigation }) => {
             <List.Item
               title="Beneficiaries"
               right={(props) => <List.Icon {...props} icon="chevron-right" />}
-              onPress={() => navigation.navigate("Beneficiaries")} // stack screen name
+              onPress={() => navigation.navigate("health-Beneficiaries")} // stack screen name
             />
           </Card.Content>
         </Card>
