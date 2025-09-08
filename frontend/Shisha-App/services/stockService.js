@@ -13,7 +13,7 @@ export const createStock = async (data) => {
 // Get all stocks (optionally filter by user)
 export const getAllStocks = async (userId = null) => {
   try {
-    const url = userId ? `/stock?userId=${userId}` : "/stock";
+    const url = userId ? `/stock/stocks?userId=${userId}` : "/stock/stocks";
     const response = await axiosInstance.get(url);
     return response.data;
   } catch (error) {
@@ -40,4 +40,3 @@ export const deleteStock = async (id) => {
     throw error.response?.data || { message: error.message };
   }
 };
-

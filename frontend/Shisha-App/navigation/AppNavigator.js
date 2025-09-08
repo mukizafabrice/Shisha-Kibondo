@@ -27,8 +27,10 @@ import StockTransactionsScreen from "../screens/Manager/StockTransactionsScreen"
 import HealthWorkerHomeScreen from "../screens/Health_worker/HomeScreen";
 import HealthWorkerSettingsScreen from "../screens/Health_worker/SettingsScreen";
 import HealthWorkerReportsScreen from "../screens/Health_worker/ReportsScreen";
+import DistributionScreen from "../screens/Health_worker/DistributionScreen";
 import StockScreen from "../screens/Health_worker/StockManagementScreen";
 import HealthBeneficiariesScreen from "../screens/Health_worker/BeneficiariesScreen";
+import HealthProductsScreen from "../screens/Health_worker/ProductsScreen";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -209,7 +211,7 @@ const HealthWorkerTabNavigator = () => {
       />
       <Tab.Screen
         name="Reports"
-        component={HealthWorkerReportsScreen}
+        component={DistributionScreen}
         options={{
           tabBarLabel: "Distribution",
           tabBarIcon: ({ color, size }) => (
@@ -344,6 +346,16 @@ const AppNavigator = () => {
             component={HealthBeneficiariesScreen}
             options={{
               title: "Beneficiaries",
+              headerStyle: { backgroundColor: "#007AFF" },
+              headerTintColor: "#fff",
+              headerTitleStyle: { fontWeight: "bold" },
+            }}
+          />
+          <Stack.Screen
+            name="health-ProductsScreen"
+            component={HealthProductsScreen}
+            options={{
+              title: "Products",
               headerStyle: { backgroundColor: "#007AFF" },
               headerTintColor: "#fff",
               headerTitleStyle: { fontWeight: "bold" },

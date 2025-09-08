@@ -120,15 +120,15 @@ const SettingsScreen = ({ navigation }) => {
           <Card.Content>
             <Text style={styles.sectionTitle}>Manage Data</Text>
             <List.Item
-              title="Users"
+              title="profile"
               right={(props) => <List.Icon {...props} icon="chevron-right" />}
-              onPress={() => navigation.navigate("Users")} // stack screen name
+              onPress={() => navigation.navigate("Profile")} // stack screen name
             />
 
             <List.Item
               title="Products"
               right={(props) => <List.Icon {...props} icon="chevron-right" />}
-              onPress={() => navigation.navigate("ProductsScreen")}
+              onPress={() => navigation.navigate("health-ProductsScreen")}
             />
 
             <List.Item
