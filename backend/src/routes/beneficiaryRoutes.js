@@ -18,9 +18,9 @@ const router = express.Router();
 // Beneficiary CRUD routes
 router.post("/beneficiaries", createBeneficiary);
 router.get("/beneficiaries", getBeneficiaries);
-router.get("/beneficiaries/:userId", getBeneficiaryByUserId);
+router.get("/beneficiaries/user/:userId", getBeneficiaryByUserId);
 router.get("/beneficiaries/stats", getBeneficiaryStats);
-router.get("/beneficiaries/user/:userId", getBeneficiaries); // Get beneficiaries by user ID
+// router.get("/beneficiaries/user/:userId", getBeneficiaries);
 router.get("/beneficiaries/:id", getBeneficiary);
 router.put("/beneficiaries/:id", updateBeneficiary);
 router.delete("/beneficiaries/:id", deleteBeneficiary);

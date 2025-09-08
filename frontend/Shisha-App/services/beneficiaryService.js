@@ -8,12 +8,16 @@ const BeneficiaryService = {
    */
   createBeneficiary: async (beneficiaryData) => {
     try {
-      const response = await axiosInstance.post("/beneficiaries", beneficiaryData);
+      const response = await axiosInstance.post(
+        "/beneficiaries",
+        beneficiaryData
+      );
       return response.data;
     } catch (error) {
       console.error("Create beneficiary error:", error.message);
       throw new Error(
-        error.response?.data?.message || "Failed to create beneficiary. Please try again."
+        error.response?.data?.message ||
+          "Failed to create beneficiary. Please try again."
       );
     }
   },
@@ -30,7 +34,8 @@ const BeneficiaryService = {
     } catch (error) {
       console.error("Get beneficiaries error:", error.message);
       throw new Error(
-        error.response?.data?.message || "Failed to fetch beneficiaries. Please try again."
+        error.response?.data?.message ||
+          "Failed to fetch beneficiaries. Please try again."
       );
     }
   },
@@ -42,12 +47,14 @@ const BeneficiaryService = {
    */
   getBeneficiary: async (id) => {
     try {
-      const response = await axiosInstance.get(`/beneficiaries/${id}`);
-      return response.data;
+      console.log("Fetching beneficiaries for userId:", id, typeof id);
+      const response = await axiosInstance.get(`/beneficiaries/user/${id}`);
+      return response.data.data;
     } catch (error) {
-      console.error("Get beneficiary error:", error.message);
+      console.error("Get beneficiary error:", error);
       throw new Error(
-        error.response?.data?.message || "Failed to fetch beneficiary. Please try again."
+        error.response?.data?.message ||
+          "Failed to fetch beneficiary. Please try again."
       );
     }
   },
@@ -60,12 +67,16 @@ const BeneficiaryService = {
    */
   updateBeneficiary: async (id, beneficiaryData) => {
     try {
-      const response = await axiosInstance.put(`/beneficiaries/${id}`, beneficiaryData);
+      const response = await axiosInstance.put(
+        `/beneficiaries/${id}`,
+        beneficiaryData
+      );
       return response.data;
     } catch (error) {
       console.error("Update beneficiary error:", error.message);
       throw new Error(
-        error.response?.data?.message || "Failed to update beneficiary. Please try again."
+        error.response?.data?.message ||
+          "Failed to update beneficiary. Please try again."
       );
     }
   },
@@ -82,7 +93,8 @@ const BeneficiaryService = {
     } catch (error) {
       console.error("Delete beneficiary error:", error.message);
       throw new Error(
-        error.response?.data?.message || "Failed to delete beneficiary. Please try again."
+        error.response?.data?.message ||
+          "Failed to delete beneficiary. Please try again."
       );
     }
   },
@@ -98,7 +110,8 @@ const BeneficiaryService = {
     } catch (error) {
       console.error("Get beneficiary stats error:", error.message);
       throw new Error(
-        error.response?.data?.message || "Failed to fetch beneficiary statistics. Please try again."
+        error.response?.data?.message ||
+          "Failed to fetch beneficiary statistics. Please try again."
       );
     }
   },
@@ -111,12 +124,16 @@ const BeneficiaryService = {
    */
   addProgramDay: async (beneficiaryId, dayData) => {
     try {
-      const response = await axiosInstance.post(`/beneficiaries/${beneficiaryId}/days`, dayData);
+      const response = await axiosInstance.post(
+        `/beneficiaries/${beneficiaryId}/days`,
+        dayData
+      );
       return response.data;
     } catch (error) {
       console.error("Add program day error:", error.message);
       throw new Error(
-        error.response?.data?.message || "Failed to add program day. Please try again."
+        error.response?.data?.message ||
+          "Failed to add program day. Please try again."
       );
     }
   },
@@ -129,12 +146,16 @@ const BeneficiaryService = {
    */
   getProgramDays: async (beneficiaryId, params = {}) => {
     try {
-      const response = await axiosInstance.get(`/beneficiaries/${beneficiaryId}/days`, { params });
+      const response = await axiosInstance.get(
+        `/beneficiaries/${beneficiaryId}/days`,
+        { params }
+      );
       return response.data;
     } catch (error) {
       console.error("Get program days error:", error.message);
       throw new Error(
-        error.response?.data?.message || "Failed to fetch program days. Please try again."
+        error.response?.data?.message ||
+          "Failed to fetch program days. Please try again."
       );
     }
   },
@@ -156,7 +177,8 @@ const BeneficiaryService = {
     } catch (error) {
       console.error("Update program day attendance error:", error.message);
       throw new Error(
-        error.response?.data?.message || "Failed to update attendance. Please try again."
+        error.response?.data?.message ||
+          "Failed to update attendance. Please try again."
       );
     }
   },
@@ -169,12 +191,15 @@ const BeneficiaryService = {
    */
   removeProgramDay: async (beneficiaryId, dayId) => {
     try {
-      const response = await axiosInstance.delete(`/beneficiaries/${beneficiaryId}/days/${dayId}`);
+      const response = await axiosInstance.delete(
+        `/beneficiaries/${beneficiaryId}/days/${dayId}`
+      );
       return response.data;
     } catch (error) {
       console.error("Remove program day error:", error.message);
       throw new Error(
-        error.response?.data?.message || "Failed to remove program day. Please try again."
+        error.response?.data?.message ||
+          "Failed to remove program day. Please try again."
       );
     }
   },
@@ -188,15 +213,18 @@ const BeneficiaryService = {
   bulkUpdateAttendance: async (beneficiaryId, attendanceUpdates) => {
     try {
       const promises = attendanceUpdates.map(({ dayId, attended, notes }) =>
-        BeneficiaryService.updateProgramDayAttendance(beneficiaryId, dayId, { attended, notes })
+        BeneficiaryService.updateProgramDayAttendance(beneficiaryId, dayId, {
+          attended,
+          notes,
+        })
       );
-      
+
       const results = await Promise.allSettled(promises);
       return results.map((result, index) => ({
         dayId: attendanceUpdates[index].dayId,
-        success: result.status === 'fulfilled',
-        data: result.status === 'fulfilled' ? result.value : null,
-        error: result.status === 'rejected' ? result.reason.message : null
+        success: result.status === "fulfilled",
+        data: result.status === "fulfilled" ? result.value : null,
+        error: result.status === "rejected" ? result.reason.message : null,
       }));
     } catch (error) {
       console.error("Bulk update attendance error:", error.message);
@@ -256,9 +284,14 @@ const BeneficiaryService = {
    * @param {number} limit - Items per page.
    * @returns {Promise<object>} A promise that resolves with filtered beneficiaries.
    */
-  getBeneficiariesByUserAndStatus: async (userId, status, page = 1, limit = 10) => {
+  getBeneficiariesByUserAndStatus: async (
+    userId,
+    status,
+    page = 1,
+    limit = 10
+  ) => {
     return BeneficiaryService.getBeneficiaries({ userId, status, page, limit });
-  }
+  },
 };
 
 export default BeneficiaryService;

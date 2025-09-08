@@ -134,22 +134,28 @@ export const getBeneficiary = async (req, res) => {
 
 export const getBeneficiaryByUserId = async (req, res) => {
   try {
-    const { usedId } = req.params;
+    const { userId } = req.params;
 
-    const beneficiary = await Beneficiaries.find({ userId: usedId })
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid userId format",
+      });
+    }
+    const beneficiaries = await Beneficiaries.find({ userId })
       .populate("programDays")
       .populate("userId", "name email role");
 
-    if (!beneficiary) {
+    if (!beneficiaries || beneficiaries.length === 0) {
       return res.status(404).json({
         success: false,
-        message: "Beneficiary not found",
+        message: "No beneficiaries found for this user",
       });
     }
 
     res.status(200).json({
       success: true,
-      data: beneficiary,
+      data: beneficiaries,
     });
   } catch (error) {
     res.status(500).json({

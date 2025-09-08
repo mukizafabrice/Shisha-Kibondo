@@ -30,7 +30,7 @@ import DistributeToUmunyabuzimaService from "../../services/distributeToUmunyabu
 import UserService from "../../services/userService";
 
 const BeneficiariesScreen = ({ navigation, route }) => {
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
 
   const [fontsLoaded] = useFonts({
     Poppins_400Regular,
@@ -104,47 +104,17 @@ const BeneficiariesScreen = ({ navigation, route }) => {
 
   const fetchBeneficiaries = async () => {
     try {
-     
-      const data = await BeneficiaryService.getBeneficiariesByUser();
+      const userId = user?.id;
+      console.log("Fetching beneficiaries for userId:", userId);
+      const data = await BeneficiaryService.getBeneficiary(userId);
       console.log("Fetched beneficiaries:", data);
-      setBeneficiaries(data.data || []);
+      setBeneficiaries(data || []); // ✅ fixed
     } catch (error) {
       console.error("Error fetching beneficiaries:", error);
       Alert.alert("Error", "Failed to fetch beneficiaries. Please try again.");
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleDelete = async (beneficiaryId) => {
-    Alert.alert(
-      "Delete Beneficiary",
-      "Are you sure you want to delete this beneficiary?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await BeneficiaryService.deleteBeneficiary(beneficiaryId);
-              setBeneficiaries(
-                beneficiaries.filter(
-                  (beneficiary) => beneficiary._id !== beneficiaryId
-                )
-              );
-              Alert.alert("Success", "Beneficiary deleted successfully");
-            } catch (error) {
-              Alert.alert("Error", error.message);
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  const handleEdit = (beneficiary) => {
-    navigation.navigate("AddBeneficiary", { beneficiary });
   };
 
   // Refresh beneficiaries when returning from edit screen
@@ -225,9 +195,6 @@ const BeneficiariesScreen = ({ navigation, route }) => {
       <Text style={[styles.headerText, styles.villageColumn]}>Village</Text>
       <Text style={[styles.headerText, styles.typeColumn]}>Type</Text>
       <Text style={[styles.headerText, styles.statusColumn]}>Status</Text>
-      <View style={[styles.actionsColumn]}>
-        <Text style={styles.headerText}>Actions</Text>
-      </View>
     </View>
   );
 
@@ -267,35 +234,16 @@ const BeneficiariesScreen = ({ navigation, route }) => {
         {item.type}
       </Text>
       <Text
-        style={[styles.cellText, styles.statusColumn]}
+        style={[
+          styles.cellText,
+          styles.statusColumn,
+          { color: getTypeColor(item.type) }, // apply color based on type
+        ]}
         numberOfLines={1}
         ellipsizeMode="tail"
       >
         {item.status}
       </Text>
-      <View style={[styles.actions, styles.actionsColumn]}>
-        <IconButton
-          icon="eye"
-          size={16}
-          iconColor="#3498db"
-          onPress={() => handleViewDetails(item)}
-          style={styles.iconButton}
-        />
-        <IconButton
-          icon="pencil"
-          size={16}
-          iconColor="#f39c12"
-          onPress={() => handleEdit(item)}
-          style={styles.iconButton}
-        />
-        <IconButton
-          icon="delete"
-          size={16}
-          iconColor="#e74c3c"
-          onPress={() => handleDelete(item._id)}
-          style={styles.iconButton}
-        />
-      </View>
     </View>
   );
 
@@ -314,7 +262,6 @@ const BeneficiariesScreen = ({ navigation, route }) => {
     >
       <Surface style={styles.container}>
         {/* Action Buttons */}
-     
 
         {/* Search and Filter Controls */}
         <Card style={styles.controlsCard}>
@@ -401,6 +348,7 @@ const BeneficiariesScreen = ({ navigation, route }) => {
         </Card>
 
         {/* Beneficiaries Table */}
+        {/* Beneficiaries Table */}
         <View style={styles.tableCard}>
           <ScrollView
             horizontal
@@ -447,35 +395,16 @@ const BeneficiariesScreen = ({ navigation, route }) => {
                       {item.type}
                     </Text>
                     <Text
-                      style={[styles.cellText, styles.statusColumn]}
+                      style={[
+                        styles.cellText,
+                        styles.statusColumn,
+                        { color: getStatusColor(item.status) }, // <-- use status color
+                      ]}
                       numberOfLines={1}
                       ellipsizeMode="tail"
                     >
                       {item.status}
                     </Text>
-                    <View style={[styles.actions, styles.actionsColumn]}>
-                      <IconButton
-                        icon="eye"
-                        size={16}
-                        iconColor="#3498db"
-                        onPress={() => handleViewDetails(item)}
-                        style={styles.iconButton}
-                      />
-                      <IconButton
-                        icon="pencil"
-                        size={16}
-                        iconColor="#f39c12"
-                        onPress={() => handleEdit(item)}
-                        style={styles.iconButton}
-                      />
-                      <IconButton
-                        icon="delete"
-                        size={16}
-                        iconColor="#e74c3c"
-                        onPress={() => handleDelete(item._id)}
-                        style={styles.iconButton}
-                      />
-                    </View>
                   </View>
                 ))
               ) : (
@@ -578,7 +507,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   tableWrapper: {
-    minWidth: 700,
+    minWidth: 500,
     backgroundColor: "#fff",
   },
   tableHeader: {
