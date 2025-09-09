@@ -75,7 +75,9 @@ const ProfileScreen = () => {
         try {
           // You could add a method to refresh user data from server here
           // For now, we'll just log the issue
-          console.log("Consider logging out and logging back in to refresh user data");
+          console.log(
+            "Consider logging out and logging back in to refresh user data"
+          );
         } catch (error) {
           console.error("Error refreshing user data:", error);
         }
@@ -194,21 +196,17 @@ const ProfileScreen = () => {
   };
 
   const handleLogout = () => {
-    Alert.alert(
-      "Confirm Logout",
-      "Are you sure you want to logout?",
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-        {
-          text: "Logout",
-          style: "destructive",
-          onPress: logout,
-        },
-      ]
-    );
+    Alert.alert("Confirm Logout", "Are you sure you want to logout?", [
+      {
+        text: "Cancel",
+        style: "cancel",
+      },
+      {
+        text: "Logout",
+        style: "destructive",
+        onPress: logout,
+      },
+    ]);
   };
 
   if (!fontsLoaded) {
@@ -306,14 +304,19 @@ const ProfileScreen = () => {
               error={!!errors.nationalId}
               disabled={!isEditing}
               theme={{ colors: { primary: "#007AFF" } }}
-              placeholder={!user?.nationalId ? "Log out and log back in to load your National ID" : ""}
+              placeholder={
+                !user?.nationalId
+                  ? "Log out and log back in to load your National ID"
+                  : ""
+              }
             />
             {errors.nationalId && (
               <Text style={styles.errorText}>{errors.nationalId}</Text>
             )}
             {!user?.nationalId && (
               <Text style={styles.infoText}>
-                Note: Your National ID is not loaded. Please log out and log back in to refresh your profile data.
+                Note: Your National ID is not loaded. Please log out and log
+                back in to refresh your profile data.
               </Text>
             )}
           </Card.Content>
@@ -361,7 +364,7 @@ const ProfileScreen = () => {
         )}
 
         {/* Recent Activity Section */}
-        <Card style={styles.activityCard}>
+        {/* <Card style={styles.activityCard}>
           <Card.Content>
             <Text style={styles.sectionTitle}>Recent Activity</Text>
             <View style={styles.activityItem}>
@@ -373,7 +376,7 @@ const ProfileScreen = () => {
               <Text style={styles.activityText}>Last login: Today</Text>
             </View>
           </Card.Content>
-        </Card>
+        </Card> */}
 
         {/* Action Buttons */}
         {isEditing && (
@@ -400,7 +403,7 @@ const ProfileScreen = () => {
         )}
 
         {/* Logout Section */}
-        <Card style={styles.logoutCard}>
+        {/* <Card style={styles.logoutCard}>
           <Card.Content>
             <Text style={styles.sectionTitle}>Account Actions</Text>
             <Button
@@ -413,7 +416,7 @@ const ProfileScreen = () => {
               Logout
             </Button>
           </Card.Content>
-        </Card>
+        </Card> */}
       </ScrollView>
     </KeyboardAvoidingView>
   );

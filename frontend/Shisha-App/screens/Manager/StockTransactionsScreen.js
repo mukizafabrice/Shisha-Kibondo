@@ -139,7 +139,6 @@ const StockTransactionsScreen = () => {
         </Card.Content>
       </Card>
       {/* Table */}
-      // Table
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
         <View style={[styles.table, { minWidth: 400 }]}>
           <View style={[styles.tableHeader, { backgroundColor: "#2c3e50" }]}>

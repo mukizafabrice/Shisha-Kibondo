@@ -16,9 +16,9 @@ import {
   Portal,
   Modal,
   ActivityIndicator,
-  Menu,
   IconButton,
 } from "react-native-paper";
+import DropDownPicker from "react-native-dropdown-picker";
 import {
   useFonts,
   Poppins_400Regular,
@@ -65,10 +65,13 @@ const StockManagementScreen = () => {
   // Modals & form states
   const [addStockModalVisible, setAddStockModalVisible] = useState(false);
   const [editStockModalVisible, setEditStockModalVisible] = useState(false);
-  const [productMenuVisible, setProductMenuVisible] = useState(false);
 
   const [stockForm, setStockForm] = useState({ productId: "", totalStock: "" });
   const [editingStockId, setEditingStockId] = useState(null);
+
+  // DropDown state
+  const [productOpen, setProductOpen] = useState(false);
+  const [productItems, setProductItems] = useState([]);
 
   const navigation = useNavigation();
 
@@ -83,6 +86,11 @@ const StockManagementScreen = () => {
       const allProducts = await getAllProducts();
       setMainStock(stockResponse);
       setProducts(allProducts);
+
+      // map for DropDownPicker
+      setProductItems(
+        allProducts.map((p) => ({ label: p.name, value: p._id }))
+      );
     } catch (error) {
       console.error(error);
       Alert.alert("Error", "Failed to load data.");
@@ -171,8 +179,7 @@ const StockManagementScreen = () => {
             try {
               await deleteMainStock(id);
               Alert.alert("Deleted", "Stock has been deleted.");
-              // Refresh the table
-              fetchAll(); // <-- this reloads your stock list
+              fetchAll();
             } catch (error) {
               console.error(error);
               Alert.alert("Error", error.message || "Failed to delete stock.");
@@ -255,7 +262,7 @@ const StockManagementScreen = () => {
   }
 
   return (
-    <Surface style={styles.container}>
+    <ScrollView showsVerticalScrollIndicator={false} style={styles.container}>
       {/* Header */}
       <Card style={styles.headerCard}>
         <View style={styles.headerContent}>
@@ -355,40 +362,23 @@ const StockManagementScreen = () => {
         >
           <Text style={styles.modalTitle}>Add New Stock</Text>
           <ScrollView>
-            {/* Product selector */}
-            <Menu
-              visible={productMenuVisible}
-              onDismiss={() => setProductMenuVisible(false)}
-              anchor={
-                <TextInput
-                  label="Select Product"
-                  value={
-                    products.find((p) => p._id === stockForm.productId)?.name ||
-                    ""
-                  }
-                  mode="outlined"
-                  right={<TextInput.Icon icon="menu-down" />}
-                  style={styles.modalInput}
-                  onPressIn={() => setProductMenuVisible(true)}
-                />
+            <DropDownPicker
+              open={productOpen}
+              value={stockForm.productId}
+              items={productItems}
+              setOpen={setProductOpen}
+              setValue={(callback) =>
+                setStockForm((prev) => ({
+                  ...prev,
+                  productId: callback(prev.productId),
+                }))
               }
-            >
-              {products.map((product) => (
-                <Menu.Item
-                  key={product._id}
-                  title={product.name}
-                  onPress={() => {
-                    setStockForm((prev) => ({
-                      ...prev,
-                      productId: product._id,
-                    }));
-                    setProductMenuVisible(false);
-                  }}
-                />
-              ))}
-            </Menu>
+              setItems={setProductItems}
+              placeholder="Select Product"
+              style={styles.dropdown}
+              dropDownContainerStyle={styles.dropdownContainer}
+            />
 
-            {/* Total stock input */}
             <TextInput
               label="Total Stock"
               value={stockForm.totalStock}
@@ -400,8 +390,6 @@ const StockManagementScreen = () => {
               style={styles.modalInput}
             />
           </ScrollView>
-
-          {/* Actions */}
           <View style={styles.modalActions}>
             <Button
               mode="outlined"
@@ -430,37 +418,22 @@ const StockManagementScreen = () => {
         >
           <Text style={styles.modalTitle}>Edit Stock</Text>
           <ScrollView>
-            <Menu
-              visible={productMenuVisible}
-              onDismiss={() => setProductMenuVisible(false)}
-              anchor={
-                <TextInput
-                  label="Select Product"
-                  value={
-                    products.find((p) => p._id === stockForm.productId)?.name ||
-                    ""
-                  }
-                  mode="outlined"
-                  right={<TextInput.Icon icon="menu-down" />}
-                  style={styles.modalInput}
-                  onPressIn={() => setProductMenuVisible(true)}
-                />
+            <DropDownPicker
+              open={productOpen}
+              value={stockForm.productId}
+              items={productItems}
+              setOpen={setProductOpen}
+              setValue={(callback) =>
+                setStockForm((prev) => ({
+                  ...prev,
+                  productId: callback(prev.productId),
+                }))
               }
-            >
-              {products.map((product) => (
-                <Menu.Item
-                  key={product._id}
-                  title={product.name}
-                  onPress={() => {
-                    setStockForm((prev) => ({
-                      ...prev,
-                      productId: product._id,
-                    }));
-                    setProductMenuVisible(false);
-                  }}
-                />
-              ))}
-            </Menu>
+              setItems={setProductItems}
+              placeholder="Select Product"
+              style={styles.dropdown}
+              dropDownContainerStyle={styles.dropdownContainer}
+            />
 
             <TextInput
               label="Total Stock"
@@ -491,11 +464,10 @@ const StockManagementScreen = () => {
           </View>
         </Modal>
       </Portal>
-    </Surface>
+    </ScrollView>
   );
 };
 
-// Styles (unchanged)
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, backgroundColor: "#f5f7fa" },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
@@ -603,6 +575,8 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   modalButton: { flex: 1, marginHorizontal: 5 },
+  dropdown: { marginBottom: 16, borderColor: "#ccc" },
+  dropdownContainer: { borderColor: "#ccc", backgroundColor: "#fff" },
 });
 
 export default StockManagementScreen;

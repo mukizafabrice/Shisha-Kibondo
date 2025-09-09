@@ -131,7 +131,31 @@ export const getBeneficiary = async (req, res) => {
     });
   }
 };
+export const fetchBeneficiaries = async (req, res) => {
+  try {
 
+    const beneficiary = await Beneficiaries.find()
+      .populate("programDays")
+      .populate("userId", "name email role");
+
+    if (!beneficiary) {
+      return res.status(404).json({
+        success: false,
+        message: "Beneficiary not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: beneficiary,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
 export const getBeneficiaryByUserId = async (req, res) => {
   try {
     const { userId } = req.params;

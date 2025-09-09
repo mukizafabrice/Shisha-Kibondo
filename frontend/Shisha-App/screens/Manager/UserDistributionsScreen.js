@@ -331,7 +331,7 @@ const UserDistributionsScreen = ({ navigation }) => {
   }
 
   return (
-    <Surface style={styles.container}>
+    <ScrollView showsVerticalScrollIndicator={false} style={styles.container}>
       {/* Buttons */}
       <Card style={styles.buttonsCard}>
         <Card.Content>
@@ -607,7 +607,7 @@ const UserDistributionsScreen = ({ navigation }) => {
           </Button>
         </PaperModal>
       </Portal>
-    </Surface>
+    </ScrollView>
   );
 };
 

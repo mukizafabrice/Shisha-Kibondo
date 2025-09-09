@@ -67,9 +67,9 @@ const ProfileScreen = () => {
   };
 
   const handleInputChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: null }));
+      setErrors((prev) => ({ ...prev, [field]: null }));
     }
   };
 
@@ -90,22 +90,21 @@ const ProfileScreen = () => {
       // Update the auth context
       updateUser(response.user);
 
-      Alert.alert(
-        "Success",
-        "Password updated successfully!",
-        [
-          {
-            text: "OK",
-            onPress: () => {
-              setIsEditing(false);
-              setFormData({ password: "", confirmPassword: "" });
-            },
+      Alert.alert("Success", "Password updated successfully!", [
+        {
+          text: "OK",
+          onPress: () => {
+            setIsEditing(false);
+            setFormData({ password: "", confirmPassword: "" });
           },
-        ]
-      );
+        },
+      ]);
     } catch (error) {
       console.error("Update password error:", error);
-      Alert.alert("Error", error.message || "Failed to update password. Please try again.");
+      Alert.alert(
+        "Error",
+        error.message || "Failed to update password. Please try again."
+      );
     } finally {
       setLoading(false);
     }
@@ -130,18 +129,25 @@ const ProfileScreen = () => {
       style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Profile Header */}
         <Surface style={styles.headerCard}>
           <View style={styles.headerContent}>
-            <Avatar.Image
+            {/* <Avatar.Image
               size={80}
               source={require("../../assets/logo.png")}
               style={styles.avatar}
-            />
+            /> */}
             <View style={styles.headerText}>
-              <Text style={styles.userName}>{user?.name || "Health Worker"}</Text>
-              <Text style={styles.userRole}>{user?.role || "Health Worker"}</Text>
+              <Text style={styles.userName}>
+                {user?.name || "Health Worker"}
+              </Text>
+              <Text style={styles.userRole}>
+                {user?.role || "Health Worker"}
+              </Text>
             </View>
             <IconButton
               icon={isEditing ? "close" : "pencil"}
@@ -159,26 +165,35 @@ const ProfileScreen = () => {
 
             <View style={styles.readOnlyField}>
               <Text style={styles.fieldLabel}>Full Name</Text>
-              <Text style={styles.fieldValue}>{user?.name || "Not provided"}</Text>
+              <Text style={styles.fieldValue}>
+                {user?.name || "Not provided"}
+              </Text>
             </View>
 
             <View style={styles.readOnlyField}>
               <Text style={styles.fieldLabel}>Email Address</Text>
-              <Text style={styles.fieldValue}>{user?.email || "Not provided"}</Text>
+              <Text style={styles.fieldValue}>
+                {user?.email || "Not provided"}
+              </Text>
             </View>
 
             <View style={styles.readOnlyField}>
               <Text style={styles.fieldLabel}>Phone Number</Text>
-              <Text style={styles.fieldValue}>{user?.phone || "Not provided"}</Text>
+              <Text style={styles.fieldValue}>
+                {user?.phone || "Not provided"}
+              </Text>
             </View>
 
             <View style={styles.readOnlyField}>
               <Text style={styles.fieldLabel}>National ID</Text>
-              <Text style={styles.fieldValue}>{user?.nationalId || "Not provided"}</Text>
+              <Text style={styles.fieldValue}>
+                {user?.nationalId || "Not provided"}
+              </Text>
             </View>
 
             <Text style={styles.noteText}>
-              Note: Personal information cannot be edited. Contact your administrator for changes.
+              Note: Personal information cannot be edited. Contact your
+              administrator for changes.
             </Text>
           </Card.Content>
         </Card>
@@ -199,25 +214,31 @@ const ProfileScreen = () => {
                 error={!!errors.password}
                 theme={{ colors: { primary: "#007AFF" } }}
               />
-              {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
+              {errors.password && (
+                <Text style={styles.errorText}>{errors.password}</Text>
+              )}
 
               <TextInput
                 label="Confirm New Password"
                 value={formData.confirmPassword}
-                onChangeText={(value) => handleInputChange("confirmPassword", value)}
+                onChangeText={(value) =>
+                  handleInputChange("confirmPassword", value)
+                }
                 mode="outlined"
                 secureTextEntry
                 style={styles.input}
                 error={!!errors.confirmPassword}
                 theme={{ colors: { primary: "#007AFF" } }}
               />
-              {errors.confirmPassword && <Text style={styles.errorText}>{errors.confirmPassword}</Text>}
+              {errors.confirmPassword && (
+                <Text style={styles.errorText}>{errors.confirmPassword}</Text>
+              )}
             </Card.Content>
           </Card>
         )}
 
         {/* Recent Activity Section */}
-        <Card style={styles.activityCard}>
+        {/* <Card style={styles.activityCard}>
           <Card.Content>
             <Text style={styles.sectionTitle}>Recent Activity</Text>
             <View style={styles.activityItem}>
@@ -227,7 +248,7 @@ const ProfileScreen = () => {
               <Text style={styles.activityText}>Account created: {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : "Recently"}</Text>
             </View>
           </Card.Content>
-        </Card>
+        </Card> */}
 
         {/* Action Buttons */}
         {isEditing && (

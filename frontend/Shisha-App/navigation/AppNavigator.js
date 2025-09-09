@@ -21,6 +21,7 @@ import AddDistributionScreen from "../screens/Manager/AddDistributionScreen";
 import UserDistributionsScreen from "../screens/Manager/UserDistributionsScreen";
 import StockManagementScreen from "../screens/Manager/StockManagementScreen";
 import ProductsScreen from "../screens/Manager/ProductsScreen";
+import ProfileScreen from "../screens/Manager/ProfileScreen";
 import AddProductScreen from "../screens/Manager/AddProductScreen";
 import StockTransactionsScreen from "../screens/Manager/StockTransactionsScreen";
 // Health Worker Screens
@@ -31,6 +32,7 @@ import DistributionScreen from "../screens/Health_worker/DistributionScreen";
 import StockScreen from "../screens/Health_worker/StockManagementScreen";
 import HealthBeneficiariesScreen from "../screens/Health_worker/BeneficiariesScreen";
 import HealthProductsScreen from "../screens/Health_worker/ProductsScreen";
+import HealthProfileScreen from "../screens/Health_worker/ProfileScreen";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -313,6 +315,16 @@ const AppNavigator = () => {
             }}
           />
           <Stack.Screen
+            name="ProfileScreen"
+            component={ProfileScreen}
+            options={{
+              title: "Edit Profile",
+              headerStyle: { backgroundColor: "#007AFF" },
+              headerTintColor: "#fff",
+              headerTitleStyle: { fontWeight: "bold" },
+            }}
+          />
+          <Stack.Screen
             name="AddProduct" // match the navigate call
             component={AddProductScreen}
             options={{
@@ -356,6 +368,16 @@ const AppNavigator = () => {
             component={HealthProductsScreen}
             options={{
               title: "Products",
+              headerStyle: { backgroundColor: "#007AFF" },
+              headerTintColor: "#fff",
+              headerTitleStyle: { fontWeight: "bold" },
+            }}
+          />
+          <Stack.Screen
+            name="health-ProfileScreen"
+            component={HealthProfileScreen}
+            options={{
+              title: "Edit Profile",
               headerStyle: { backgroundColor: "#007AFF" },
               headerTintColor: "#fff",
               headerTitleStyle: { fontWeight: "bold" },

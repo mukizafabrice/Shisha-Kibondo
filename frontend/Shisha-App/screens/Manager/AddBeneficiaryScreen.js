@@ -211,7 +211,7 @@ const AddBeneficiaryScreen = ({ navigation, route }) => {
       style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      <Surface style={styles.surface}>
+      <ScrollView showsVerticalScrollIndicator={false} style={styles.surface}>
         <ScrollView
           style={styles.scrollView}
           showsVerticalScrollIndicator={false}
@@ -393,7 +393,7 @@ const AddBeneficiaryScreen = ({ navigation, route }) => {
             </Card.Content>
           </Card>
         </ScrollView>
-      </Surface>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 };

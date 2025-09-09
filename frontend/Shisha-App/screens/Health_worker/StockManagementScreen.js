@@ -15,6 +15,7 @@ import {
   Card,
   IconButton,
   Surface,
+  FAB,
 } from "react-native-paper";
 import DropDownPicker from "react-native-dropdown-picker";
 import {
@@ -29,7 +30,6 @@ import {
   getAllStocks,
   createStock,
   deleteStock,
-  updateStock,
 } from "../../services/stockService";
 import { getAllProducts } from "../../services/ProductService";
 import { useAuth } from "../../context/AuthContext";
@@ -44,11 +44,9 @@ const StockScreen = ({ navigation }) => {
 
   const [products, setProducts] = useState([]);
 
+  // Modal state
   const [modalVisible, setModalVisible] = useState(false);
-  const [newStock, setNewStock] = useState({
-    productId: "",
-    totalStock: "",
-  });
+  const [newStock, setNewStock] = useState({ productId: "", totalStock: "" });
   const [saving, setSaving] = useState(false);
 
   // Dropdown state
@@ -88,7 +86,7 @@ const StockScreen = ({ navigation }) => {
     }
   };
 
-  // Filtering
+  // Filter
   const filteredStocks = useMemo(() => {
     let filtered = stocks;
     if (searchQuery.trim()) {
@@ -126,6 +124,25 @@ const StockScreen = ({ navigation }) => {
     ]);
   };
 
+  // Save new stock
+  const handleSaveStock = async () => {
+    if (!newStock.productId || !newStock.totalStock) {
+      Alert.alert("Error", "Please select a product and enter stock.");
+      return;
+    }
+    try {
+      setSaving(true);
+      await createStock(newStock);
+      fetchStocks();
+      setModalVisible(false);
+      setNewStock({ productId: "", totalStock: "" });
+    } catch (error) {
+      Alert.alert("Error", "Failed to create stock.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (loading || !fontsLoaded) {
     return (
       <View style={styles.center}>
@@ -140,7 +157,16 @@ const StockScreen = ({ navigation }) => {
       behavior="padding"
     >
       <Surface style={styles.container}>
-        {/* Add Button */}
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Stocks</Text>
+          <IconButton
+            icon="refresh"
+            size={24}
+            iconColor="#007AFF"
+            onPress={fetchStocks}
+          />
+        </View>
 
         {/* Search */}
         <Card style={styles.controlsCard}>
@@ -213,9 +239,11 @@ const StockScreen = ({ navigation }) => {
           <Card style={styles.paginationCard}>
             <Card.Content style={styles.paginationContainer}>
               <Button
-                mode="contained"
+                mode="outlined"
+                textColor="#007AFF"
                 onPress={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
+                style={styles.pageButton}
               >
                 Previous
               </Button>
@@ -223,17 +251,90 @@ const StockScreen = ({ navigation }) => {
                 Page {currentPage} of {totalPages || 1}
               </Text>
               <Button
-                mode="contained"
+                mode="outlined"
+                textColor="#007AFF"
                 onPress={() =>
                   setCurrentPage((p) => Math.min(totalPages, p + 1))
                 }
                 disabled={currentPage === totalPages}
+                style={styles.pageButton}
               >
                 Next
               </Button>
             </Card.Content>
           </Card>
         )}
+
+        {/* Floating Add Button */}
+        <FAB
+          icon="plus"
+          style={styles.fab}
+          color="#fff"
+          onPress={() => setModalVisible(true)}
+        />
+
+        {/* Modal for Add Stock */}
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={modalVisible}
+          onRequestClose={() => setModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Add Stock</Text>
+
+              <Text style={styles.label}>Product</Text>
+              <DropDownPicker
+                open={productOpen}
+                value={newStock.productId}
+                items={products.map((p) => ({ label: p.name, value: p._id }))}
+                setOpen={setProductOpen}
+                setValue={(callback) =>
+                  setNewStock((prev) => ({
+                    ...prev,
+                    productId: callback(prev.productId),
+                  }))
+                }
+                placeholder="Select a product"
+                style={styles.dropdown}
+                dropDownContainerStyle={styles.dropdownContainer}
+              />
+
+              <Text style={styles.label}>Total Stock</Text>
+              <TextInput
+                value={newStock.totalStock}
+                onChangeText={(t) =>
+                  setNewStock((prev) => ({ ...prev, totalStock: t }))
+                }
+                keyboardType="numeric"
+                mode="outlined"
+                style={styles.input}
+                theme={{ colors: { primary: "#007AFF" } }}
+              />
+
+              <View style={styles.modalButtons}>
+                <Button
+                  mode="outlined"
+                  onPress={() => setModalVisible(false)}
+                  style={styles.modalButton}
+                  textColor="#7f8c8d"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  mode="contained"
+                  onPress={handleSaveStock}
+                  style={styles.modalButton}
+                  loading={saving}
+                  buttonColor="#007AFF"
+                >
+                  Save
+                </Button>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </Surface>
     </KeyboardAvoidingView>
   );
@@ -241,81 +342,127 @@ const StockScreen = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   keyboardAvoidingView: { flex: 1 },
-  container: { flex: 1, padding: 16, backgroundColor: "#f8f9fa" },
+  container: { flex: 1, padding: 16, backgroundColor: "#f4f6f8" },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  buttonsCard: { marginBottom: 16, elevation: 2 },
-  button: { borderRadius: 6 },
-  controlsCard: { marginBottom: 16, elevation: 2 },
-  searchInput: { marginBottom: 12, backgroundColor: "#fff" },
+
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  headerTitle: {
+    fontSize: 22,
+    fontFamily: "Poppins_700Bold",
+    color: "#2c3e50",
+  },
+
+  controlsCard: {
+    marginBottom: 16,
+    elevation: 2,
+    borderRadius: 12,
+    backgroundColor: "#fff",
+  },
+  searchInput: { marginBottom: 8, backgroundColor: "#fff", borderRadius: 8 },
+
   tableScroll: { flex: 1 },
-  tableWrapper: { minWidth: 400, backgroundColor: "#fff", borderRadius: 8 },
+  tableWrapper: {
+    minWidth: 400,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    overflow: "hidden",
+    elevation: 2,
+  },
   tableHeader: {
     flexDirection: "row",
-    backgroundColor: "#34495e",
-    paddingVertical: 8,
+    backgroundColor: "#007AFF",
+    paddingVertical: 10,
     paddingHorizontal: 8,
   },
   headerText: {
-    color: "#ecf0f1",
-    fontSize: 12,
+    color: "#fff",
+    fontSize: 13,
     fontFamily: "Poppins_600SemiBold",
   },
   userRow: {
     flexDirection: "row",
-    padding: 8,
+    padding: 10,
     borderBottomWidth: 1,
     borderBottomColor: "#ecf0f1",
   },
   evenRow: { backgroundColor: "#f8f9fa" },
   oddRow: { backgroundColor: "#fff" },
   cellText: {
-    fontSize: 12,
+    fontSize: 13,
     fontFamily: "Poppins_400Regular",
     textAlign: "left",
+    color: "#2c3e50",
   },
   productColumn: { width: 150 },
   totalColumn: { width: 120 },
   userColumn: { width: 150 },
-  actionsColumn: { width: 100, flexDirection: "row", justifyContent: "center" },
-  actions: { flexDirection: "row" },
+
   empty: { textAlign: "center", padding: 40, color: "#7f8c8d" },
-  paginationCard: { elevation: 2 },
+
+  paginationCard: {
+    elevation: 2,
+    borderRadius: 12,
+    marginTop: 16,
+    backgroundColor: "#fff",
+  },
   paginationContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-  pageInfo: { fontSize: 14, fontFamily: "Poppins_600SemiBold" },
+  pageButton: { borderColor: "#007AFF", borderRadius: 8 },
+  pageInfo: {
+    fontSize: 14,
+    fontFamily: "Poppins_600SemiBold",
+    color: "#2c3e50",
+  },
+
+  fab: {
+    position: "absolute",
+    right: 20,
+    bottom: 30,
+    backgroundColor: "#007AFF",
+  },
+
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: "center",
+    padding: 16,
   },
   modalContent: {
     backgroundColor: "#fff",
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 20,
-    width: "100%",
-    marginHorizontal: 0,
+    elevation: 4,
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: "bold",
+    fontFamily: "Poppins_700Bold",
     textAlign: "center",
     marginBottom: 20,
+    color: "#2c3e50",
   },
-  label: { fontWeight: "600", marginTop: 12, marginBottom: 4 },
-  input: { marginTop: 8, backgroundColor: "#fff" },
-  dropdown: { marginBottom: 16, borderColor: "#ccc" },
+  label: {
+    fontFamily: "Poppins_600SemiBold",
+    marginTop: 12,
+    marginBottom: 6,
+    color: "#2c3e50",
+  },
+  input: { marginBottom: 12, backgroundColor: "#fff" },
+  dropdown: { marginBottom: 12, borderColor: "#ccc" },
   dropdownContainer: { borderColor: "#ccc", backgroundColor: "#fff" },
-  dropdownText: { fontSize: 14, color: "#2c3e50" },
-  placeholder: { color: "#888", fontSize: 14 },
   modalButtons: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginTop: 20,
+    marginTop: 16,
   },
-  modalButton: { flex: 1, marginHorizontal: 8 },
+  modalButton: { flex: 1, marginHorizontal: 6 },
 });
 
 export default StockScreen;

@@ -6,15 +6,17 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
+  Image,
 } from "react-native";
 import {
   Surface,
   Card,
-  Button,
   IconButton,
   Title,
   Caption,
   ProgressBar,
+  Button,
+  Avatar,
 } from "react-native-paper";
 import {
   useFonts,
@@ -27,7 +29,8 @@ import { getAllStocks } from "../../services/stockService";
 import BeneficiaryService from "../../services/beneficiaryService";
 import { getAllProducts } from "../../services/ProductService";
 import { getAllDistributions } from "../../services/distributionService";
-const HealthWorkerHomeScreen = () => {
+
+const HealthWorkerHomeScreen = ({ navigation }) => {
   const { user, logout } = useAuth();
   const [stats, setStats] = useState({
     stocks: 0,
@@ -43,7 +46,6 @@ const HealthWorkerHomeScreen = () => {
     Poppins_600SemiBold,
   });
 
-  // Fetch all dashboard data
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -70,7 +72,6 @@ const HealthWorkerHomeScreen = () => {
           distributions: totalDistributions,
         });
 
-        // Prepare data for stock breakdown
         const totalStockSum = totalStocks;
         const breakdown = productsData.map((product) => {
           const productStocks = stocksData.filter(
@@ -117,25 +118,42 @@ const HealthWorkerHomeScreen = () => {
         <View style={styles.header}>
           <View>
             <Text style={styles.greetingText}>
-              Hello, {user?.name || "Community Health Worker"}!
+              Hello,{" "}
+              <Text style={{ fontWeight: "bold", color: "blue" }}>
+                {user.name || "Community Health Worker"}
+              </Text>
+              👋
             </Text>
+
             <Caption style={styles.captionText}>
-              Here is an overview of your inventory.
+              Welcome back! Here’s your latest dashboard overview.
             </Caption>
           </View>
-          <IconButton
-            icon="logout"
-            color="#007AFF"
-            size={24}
-            onPress={logout}
-          />
+          <View style={styles.profileContainer}>
+            <Avatar.Image
+              size={44}
+              source={{
+                uri:
+                  user?.avatar ||
+                  "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
+              }}
+            />
+            <IconButton
+              icon="logout"
+              color="#EF4444"
+              size={24}
+              onPress={logout}
+            />
+          </View>
         </View>
 
         {/* Statistics Cards */}
         <View style={styles.statsContainer}>
           <Card style={styles.statCard}>
             <Card.Content style={styles.statCardContent}>
-              <Ionicons name="cube-outline" size={32} color="#4285F4" />
+              <View style={[styles.iconBox, { backgroundColor: "#DBEAFE" }]}>
+                <Ionicons name="cube-outline" size={28} color="#2563EB" />
+              </View>
               <View style={styles.statInfo}>
                 <Title>{stats.stocks}</Title>
                 <Caption>Total Stock</Caption>
@@ -144,16 +162,20 @@ const HealthWorkerHomeScreen = () => {
           </Card>
           <Card style={styles.statCard}>
             <Card.Content style={styles.statCardContent}>
-              <Ionicons name="pricetags-outline" size={32} color="#DB4437" />
+              <View style={[styles.iconBox, { backgroundColor: "#FEE2E2" }]}>
+                <Ionicons name="pricetags-outline" size={28} color="#DC2626" />
+              </View>
               <View style={styles.statInfo}>
                 <Title>{stats.products}</Title>
-                <Caption>Total Products</Caption>
+                <Caption>Products</Caption>
               </View>
             </Card.Content>
           </Card>
           <Card style={styles.statCard}>
             <Card.Content style={styles.statCardContent}>
-              <Ionicons name="people-outline" size={32} color="#F4B400" />
+              <View style={[styles.iconBox, { backgroundColor: "#FEF9C3" }]}>
+                <Ionicons name="people-outline" size={28} color="#CA8A04" />
+              </View>
               <View style={styles.statInfo}>
                 <Title>{stats.beneficiaries}</Title>
                 <Caption>Beneficiaries</Caption>
@@ -162,7 +184,9 @@ const HealthWorkerHomeScreen = () => {
           </Card>
           <Card style={styles.statCard}>
             <Card.Content style={styles.statCardContent}>
-              <Ionicons name="send-outline" size={32} color="#0F9D58" />
+              <View style={[styles.iconBox, { backgroundColor: "#DCFCE7" }]}>
+                <Ionicons name="send-outline" size={28} color="#16A34A" />
+              </View>
               <View style={styles.statInfo}>
                 <Title>{stats.distributions}</Title>
                 <Caption>Distributions</Caption>
@@ -171,31 +195,71 @@ const HealthWorkerHomeScreen = () => {
           </Card>
         </View>
 
-        {/* Stock Breakdown Visualization */}
+        {/* Stock Breakdown */}
         <Card style={styles.visualizationCard}>
           <Card.Content>
-            <Title style={styles.cardTitle}>Stock Breakdown by Product</Title>
+            <Title style={styles.cardTitle}>📊 Stock Breakdown</Title>
             {stockBreakdown.length > 0 ? (
-              <View>
-                {stockBreakdown.map((item, index) => (
-                  <View key={index} style={styles.progressItem}>
+              stockBreakdown.map((item, index) => (
+                <View key={index} style={styles.progressItem}>
+                  <View style={styles.progressRow}>
                     <Text style={styles.productName}>{item.name}</Text>
-                    <View style={styles.progressBarContainer}>
-                      <ProgressBar
-                        progress={item.percentage}
-                        color="#007AFF"
-                        style={styles.progressBar}
-                      />
-                      <Caption style={styles.progressText}>
-                        {item.value} ({Math.round(item.percentage * 100)}%)
-                      </Caption>
-                    </View>
+                    <Text style={styles.progressText}>
+                      {item.value} ({Math.round(item.percentage * 100)}%)
+                    </Text>
                   </View>
-                ))}
-              </View>
+                  <ProgressBar
+                    progress={item.percentage}
+                    color="#2563EB"
+                    style={styles.progressBar}
+                  />
+                </View>
+              ))
             ) : (
               <Text style={styles.emptyText}>No stock data to display.</Text>
             )}
+          </Card.Content>
+        </Card>
+
+        {/* Quick Actions */}
+        <Card style={styles.actionsCard}>
+          <Card.Content>
+            <Title style={styles.cardTitle}>⚡ Quick Actions</Title>
+            <View style={styles.actionsRow}>
+              <Button
+                mode="contained"
+                icon="eye"
+                style={styles.actionButton}
+                onPress={() => navigation.navigate("health-Beneficiaries")}
+              >
+                Beneficiaries
+              </Button>
+              <Button
+                mode="contained"
+                icon="send"
+                style={styles.actionButton}
+                onPress={() => navigation.navigate("Reports")}
+              >
+                New Distribution
+              </Button>
+            </View>
+          </Card.Content>
+        </Card>
+
+        {/* Recent Activity */}
+        <Card style={styles.recentCard}>
+          <Card.Content>
+            <Title style={styles.cardTitle}>📝 Recent Activity</Title>
+            <View style={styles.activityItem}>
+              <Ionicons name="checkmark-done" size={20} color="#16A34A" />
+              <Text style={styles.activityText}>
+                Distributed supplements to 12 beneficiaries
+              </Text>
+            </View>
+            <View style={styles.activityItem}>
+              <Ionicons name="cube" size={20} color="#2563EB" />
+              <Text style={styles.activityText}>Updated stock records</Text>
+            </View>
           </Card.Content>
         </Card>
       </ScrollView>
@@ -204,88 +268,114 @@ const HealthWorkerHomeScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 16,
-    backgroundColor: "#F0F2F5",
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#F0F2F5",
-  },
+  container: { flex: 1, padding: 16, backgroundColor: "#F9FAFB" },
+  centerContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: 25,
   },
   greetingText: {
-    fontSize: 24,
+    fontSize: 22,
     fontFamily: "Poppins_600SemiBold",
-    color: "#34495E",
+    color: "#1E293B",
   },
   captionText: {
     fontSize: 14,
     fontFamily: "Poppins_400Regular",
+    color: "#64748B",
   },
+  profileContainer: { flexDirection: "row", alignItems: "center" },
+
   statsContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
-    marginBottom: 20,
+    marginBottom: 25,
   },
   statCard: {
     width: "48%",
-    marginBottom: 10,
-    elevation: 2,
-    borderRadius: 12,
+    borderRadius: 16,
+    marginBottom: 12,
+    backgroundColor: "#fff",
+    elevation: 4,
   },
-  statCardContent: {
-    flexDirection: "row",
+  statCardContent: { flexDirection: "row", alignItems: "center", padding: 12 },
+  statInfo: { marginLeft: 12 },
+  iconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    justifyContent: "center",
     alignItems: "center",
   },
-  statInfo: {
-    marginLeft: 10,
-  },
+
   visualizationCard: {
-    elevation: 2,
-    borderRadius: 12,
+    borderRadius: 16,
+    backgroundColor: "#fff",
+    elevation: 3,
+    padding: 15,
+    marginBottom: 20,
   },
   cardTitle: {
     fontFamily: "Poppins_600SemiBold",
     marginBottom: 10,
-    color: "#34495E",
+    color: "#374151",
+    fontSize: 16,
   },
-  progressItem: {
-    marginBottom: 15,
-  },
-  productName: {
-    fontFamily: "Poppins_400Regular",
-    fontSize: 14,
+  progressItem: { marginBottom: 15 },
+  progressRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginBottom: 5,
   },
-  progressBarContainer: {
+  productName: {
+    fontFamily: "Poppins_600SemiBold",
+    fontSize: 14,
+    color: "#111827",
+  },
+  progressBar: { height: 10, borderRadius: 5 },
+  progressText: {
+    fontFamily: "Poppins_400Regular",
+    fontSize: 13,
+    color: "#475569",
+  },
+
+  actionsCard: {
+    borderRadius: 16,
+    backgroundColor: "#fff",
+    elevation: 3,
+    padding: 15,
+    marginBottom: 20,
+  },
+  actionsRow: { flexDirection: "row", justifyContent: "space-between" },
+  actionButton: {
+    flex: 1,
+    marginHorizontal: 5,
+    borderRadius: 10,
+    backgroundColor: "#2563EB",
+  },
+
+  recentCard: {
+    borderRadius: 16,
+    backgroundColor: "#fff",
+    elevation: 3,
+    padding: 15,
+    marginBottom: 30,
+  },
+  activityItem: {
     flexDirection: "row",
     alignItems: "center",
+    marginBottom: 10,
   },
-  progressBar: {
-    flex: 1,
-    height: 10,
-    borderRadius: 5,
-  },
-  progressText: {
-    marginLeft: 10,
-    minWidth: 50,
-    textAlign: "right",
+  activityText: {
+    marginLeft: 8,
     fontFamily: "Poppins_400Regular",
+    fontSize: 14,
+    color: "#374151",
   },
-  emptyText: {
-    textAlign: "center",
-    color: "#7F8C8D",
-    paddingVertical: 20,
-  },
+  emptyText: { textAlign: "center", color: "#9CA3AF", paddingVertical: 20 },
 });
 
 export default HealthWorkerHomeScreen;
