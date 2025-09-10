@@ -2,18 +2,19 @@ import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
-  StyleSheet,
   ScrollView,
-  Image,
+  StyleSheet,
+  ActivityIndicator,
+  Dimensions,
   TouchableOpacity,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import { Card, Title, Caption } from "react-native-paper";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LineChart, PieChart } from "react-native-chart-kit";
-import { Dimensions } from "react-native";
 import { useAuth } from "../../context/AuthContext";
+
 import BeneficiaryService from "../../services/beneficiaryService";
-import { getAllProducts } from "../../services/ProductService.js";
+import { getAllProducts } from "../../services/ProductService";
 import { getAllMainStock } from "../../services/mainStockService";
 import DistributeToUmunyabuzimaService from "../../services/distributeToUmunyabuzimaService";
 import UserService from "../../services/userService";
@@ -22,185 +23,214 @@ const screenWidth = Dimensions.get("window").width;
 
 const HomeScreen = ({ navigation }) => {
   const { user } = useAuth();
-  const [totalBeneficiaries, setTotalBeneficiaries] = useState(0);
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const beneficiaries = await BeneficiaryService.getBeneficiaries();
-        setTotalBeneficiaries(beneficiaries.data.length);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      }
-    };
-    fetchData();
-  }, []);
-  const [totalProducts, setTotalProducts] = useState(0);
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const products = await getAllProducts();
-        setTotalProducts(products.length);
-      } catch (error) {
-        console.error("Error fetching products:", error);
-      }
-    };
-    fetchProducts();
-  }, []);
+  const [loading, setLoading] = useState(true);
 
-  const [totalStock, setTotalStock] = useState(0);
+  const [stats, setStats] = useState({
+    totalBeneficiaries: 0,
+    totalProducts: 0,
+    totalStock: 0,
+    totalDistributions: 0,
+    totalUsers: 0,
+    totalActives: 0,
+  });
+
+  const [pieData, setPieData] = useState([]);
+  const [lineData, setLineData] = useState({ labels: [], datasets: [] });
+  const [recentActivity, setRecentActivity] = useState([]);
+
   useEffect(() => {
-    const fetchStock = async () => {
+    const fetchDashboardData = async () => {
       try {
-        const stockItems = await getAllMainStock();
-        const total = stockItems.reduce(
+        const [
+          beneficiariesRes,
+          productsRes,
+          stockRes,
+          distributionsRes,
+          usersRes,
+        ] = await Promise.all([
+          BeneficiaryService.getBeneficiaries(),
+          getAllProducts(),
+          getAllMainStock(),
+          DistributeToUmunyabuzimaService.getDistributions(),
+          UserService.getUsers(),
+        ]);
+
+        const beneficiaries = beneficiariesRes.data || [];
+        const totalBeneficiaries = beneficiaries.length;
+        const totalProducts = productsRes.length;
+        const totalStock = stockRes.reduce(
           (sum, item) => sum + item.totalStock,
           0
         );
-        setTotalStock(total);
+        const totalDistributions = distributionsRes.data.length;
+        const totalUsers = usersRes.length;
+
+        const activeBeneficiaries = beneficiaries.filter(
+          (b) => b.status === "active" || b.isActive === true
+        );
+        const totalActives = activeBeneficiaries.length;
+
+        // ---- Pie Data ----
+        const childCount = beneficiaries.filter(
+          (b) => b.type === "child"
+        ).length;
+        const breastfeedingCount = beneficiaries.filter(
+          (b) => b.type === "breastfeeding"
+        ).length;
+        const pregnantCount = beneficiaries.filter(
+          (b) => b.type === "pregnant"
+        ).length;
+
+        setPieData([
+          {
+            name: "Children",
+            population: childCount,
+            color: "#10B981",
+            legendFontColor: "#333",
+            legendFontSize: 12,
+          },
+          {
+            name: "Breastfeeding",
+            population: breastfeedingCount,
+            color: "#F59E0B",
+            legendFontColor: "#333",
+            legendFontSize: 12,
+          },
+          {
+            name: "Pregnant",
+            population: pregnantCount,
+            color: "#2563EB",
+            legendFontColor: "#333",
+            legendFontSize: 12,
+          },
+        ]);
+
+        // ---- Line Data (Cumulative Growth Over Last 6 Months) ----
+        const now = new Date();
+        const last6Months = [...Array(6)].map((_, i) => {
+          return new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
+        });
+
+        const cumulativeCounts = last6Months.map((monthDate) => {
+          const month = monthDate.getMonth();
+          const year = monthDate.getFullYear();
+          return beneficiaries.filter((b) => {
+            const created = new Date(b.createdAt);
+            return (
+              created.getFullYear() < year ||
+              (created.getFullYear() === year && created.getMonth() <= month)
+            );
+          }).length;
+        });
+
+        setLineData({
+          labels: last6Months.map((d) =>
+            d.toLocaleString("default", { month: "short" })
+          ),
+          datasets: [{ data: cumulativeCounts, strokeWidth: 3 }],
+        });
+
+        // ---- Recent Activity (latest 5 across all) ----
+        const activities = [];
+
+        beneficiaries.slice(-3).forEach((b) =>
+          activities.push({
+            type: "beneficiary",
+            message: `New beneficiary registered: ${b.name || "Unnamed"}`,
+            createdAt: new Date(b.createdAt),
+          })
+        );
+
+        usersRes.slice(-3).forEach((u) =>
+          activities.push({
+            type: "user",
+            message: `New user added: ${u.name || "Unnamed"}`,
+            createdAt: new Date(u.createdAt),
+          })
+        );
+
+        productsRes.slice(-3).forEach((p) =>
+          activities.push({
+            type: "product",
+            message: `Product updated: ${p.name}`,
+            createdAt: new Date(p.createdAt),
+          })
+        );
+
+        distributionsRes.data.slice(-3).forEach((d) =>
+          activities.push({
+            type: "distribution",
+            message: `Distribution made to Umunyabuzima`,
+            createdAt: new Date(d.createdAt),
+          })
+        );
+
+        activities.sort((a, b) => b.createdAt - a.createdAt);
+        setRecentActivity(activities.slice(0, 5));
+
+        // ---- Stats ----
+        setStats({
+          totalBeneficiaries,
+          totalProducts,
+          totalStock,
+          totalDistributions,
+          totalUsers,
+          totalActives,
+        });
       } catch (error) {
-        console.error("Error fetching stock:", error);
+        console.error("Error loading dashboard data:", error);
+      } finally {
+        setLoading(false);
       }
     };
-    fetchStock();
+
+    fetchDashboardData();
   }, []);
-  const [totalDistributionToUmunyabuzima, setTotalDistributionToUmunyabuzima] =
-    useState(0);
-  useEffect(() => {
-    const fetchDistribution = async () => {
-      try {
-        const distributions =
-          await DistributeToUmunyabuzimaService.getDistributions();
-        setTotalDistributionToUmunyabuzima(distributions.data.length);
-      } catch (error) {
-        console.error("Error fetching distributions:", error);
-      }
-    };
-    fetchDistribution();
-  }, []);
-  const [totalUsers, setTotalUsers] = useState(0);
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const users = await UserService.getUsers();
-        setTotalUsers(users.length);
-      } catch (error) {
-        console.error("Error fetching users:", error);
-      }
-    };
-    fetchUsers();
-  }, []);
-  const stats = [
+
+  if (loading) {
+    return (
+      <View style={styles.centerContainer}>
+        <ActivityIndicator size="large" color="#2563EB" />
+      </View>
+    );
+  }
+
+  const statCards = [
     {
       title: "Stock",
-      value: totalStock,
+      value: stats.totalStock,
       icon: "archive-outline",
       color: "#2563EB",
     },
     {
-      title: "Total Users",
-      value: totalUsers,
+      title: "Users",
+      value: stats.totalUsers,
       icon: "people-circle-outline",
       color: "#4ADE80",
     },
     {
       title: "Beneficiaries",
-      value: totalBeneficiaries,
+      value: stats.totalBeneficiaries,
       icon: "heart-outline",
       color: "#14B8A6",
     },
     {
       title: "Products",
-      value: totalProducts,
+      value: stats.totalProducts,
       icon: "layers-outline",
       color: "#FACC15",
     },
     {
-      title: "Active ones",
-      value: "2",
+      title: "Active",
+      value: stats.totalActives,
       icon: "cash-outline",
       color: "#F97316",
     },
     {
-      title: "Distribution",
-      value: totalDistributionToUmunyabuzima,
+      title: "Distributions",
+      value: stats.totalDistributions,
       icon: "send-outline",
       color: "#EF4444",
-    },
-  ];
-
-  const lineData = {
-    labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
-    datasets: [{ data: [400, 600, 800, 500, 750, 900], strokeWidth: 3 }],
-  };
-
-  const [children, setChildren] = useState(45);
-  const [breastfeeding, setBreastfeeding] = useState(35);
-  const [pregnant, setPregnant] = useState(20);
-
-  useEffect(() => {
-    const fetchBeneficiaryStats = async () => {
-      try {
-        const stats = await BeneficiaryService.getBeneficiaries(); // returns array
-
-        // Count each type
-        const childCount = stats.data.filter((b) => b.type === "child").length;
-        const breastfeedingCount = stats.data.filter(
-          (b) => b.type === "breastfeeding"
-        ).length;
-        const pregnantCount = stats.data.filter(
-          (b) => b.type === "pregnant"
-        ).length;
-
-        const total = childCount + breastfeedingCount + pregnantCount;
-
-        // Optionally calculate percentages
-        const childrenPercent = total > 0 ? (childCount / total) * 100 : 0;
-        const breastfeedingPercent =
-          total > 0 ? (breastfeedingCount / total) * 100 : 0;
-        const pregnantPercent = total > 0 ? (pregnantCount / total) * 100 : 0;
-
-        // Save counts in state
-        setChildren(childCount);
-        setBreastfeeding(breastfeedingCount);
-        setPregnant(pregnantCount);
-
-        console.log("Counts:", childCount, breastfeedingCount, pregnantCount);
-        console.log(
-          "Percentages:",
-          childrenPercent,
-          breastfeedingPercent,
-          pregnantPercent
-        );
-      } catch (error) {
-        console.error("Error fetching beneficiary stats:", error);
-      }
-    };
-
-    fetchBeneficiaryStats();
-  }, []);
-
-  // Pie chart data
-  const pieData = [
-    {
-      name: "Children",
-      population: children, // number, not object
-      color: "#10B981",
-      legendFontColor: "#333",
-      legendFontSize: 12,
-    },
-    {
-      name: "Breastfeeding",
-      population: breastfeeding,
-      color: "#F59E0B",
-      legendFontColor: "#333",
-      legendFontSize: 12,
-    },
-    {
-      name: "Pregnant",
-      population: pregnant,
-      color: "#2563EB",
-      legendFontColor: "#333",
-      legendFontSize: 12,
     },
   ];
 
@@ -211,27 +241,15 @@ const HomeScreen = ({ navigation }) => {
         <View>
           <Text style={styles.greeting}>
             Welcome back,{" "}
-            <Text style={{ fontWeight: "bold", color: "blue" }}>
-              {user.name}
-            </Text>
-            👋
+            <Text style={styles.greetingHighlight}>{user?.name}</Text> 👋
           </Text>
           <Caption>Here’s your dashboard overview</Caption>
         </View>
-        {/* <View style={styles.headerRight}>
-          <Ionicons name="notifications-outline" size={22} color="#6B7280" />
-          <Image
-            source={{
-              uri: "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
-            }}
-            style={styles.avatar}
-          />
-        </View> */}
       </View>
 
       {/* Stat Cards */}
       <View style={styles.statsGrid}>
-        {stats.map((s, i) => (
+        {statCards.map((s, i) => (
           <Card key={i} style={styles.statCard}>
             <View style={styles.statCardContent}>
               <View
@@ -250,7 +268,9 @@ const HomeScreen = ({ navigation }) => {
 
       {/* Charts */}
       <Card style={styles.chartCard}>
-        <Text style={styles.chartTitle}>📈 Beneficiaries Overview</Text>
+        <Text style={styles.chartTitle}>
+          📈 Beneficiaries Growth (Last 6 Months)
+        </Text>
         <LineChart
           data={lineData}
           width={screenWidth - 50}
@@ -287,20 +307,27 @@ const HomeScreen = ({ navigation }) => {
       {/* Recent Activity */}
       <Card style={styles.sectionCard}>
         <Text style={styles.sectionTitle}>📝 Recent Activity</Text>
-        <View style={styles.activityItem}>
-          <Ionicons name="person-add" size={18} color="#10B981" />
-          <Text style={styles.activityText}>5 new users registered today</Text>
-        </View>
-        <View style={styles.activityItem}>
-          <Ionicons name="cube" size={18} color="#3B82F6" />
-          <Text style={styles.activityText}>
-            Product “Vitamin Pack” updated
-          </Text>
-        </View>
-        <View style={styles.activityItem}>
-          <Ionicons name="cash" size={18} color="#F59E0B" />
-          <Text style={styles.activityText}>Revenue report generated</Text>
-        </View>
+        {recentActivity.length === 0 ? (
+          <Text style={{ color: "#6B7280" }}>No recent activity</Text>
+        ) : (
+          recentActivity.map((act, index) => (
+            <View key={index} style={styles.activityItem}>
+              {act.type === "user" && (
+                <Ionicons name="person-add" size={18} color="#10B981" />
+              )}
+              {act.type === "product" && (
+                <Ionicons name="cube" size={18} color="#3B82F6" />
+              )}
+              {act.type === "beneficiary" && (
+                <Ionicons name="heart" size={18} color="#EF4444" />
+              )}
+              {act.type === "distribution" && (
+                <Ionicons name="send" size={18} color="#F59E0B" />
+              )}
+              <Text style={styles.activityText}>{act.message}</Text>
+            </View>
+          ))
+        )}
       </Card>
 
       {/* Quick Actions */}
@@ -311,18 +338,30 @@ const HomeScreen = ({ navigation }) => {
             style={[styles.actionBtn, { backgroundColor: "#3B82F6" }]}
             onPress={() => navigation.navigate("Users")}
           >
-            <Text style={styles.actionText}>+ Add User</Text>
+            <MaterialCommunityIcons
+              name="account-multiple"
+              size={20}
+              color="#fff"
+            />
+            <Text style={styles.actionText}>Users</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.actionBtn, { backgroundColor: "#10B981" }]}
             onPress={() => navigation.navigate("ProductsScreen")}
           >
-            <Text style={styles.actionText}>+ Add Product</Text>
+            <MaterialCommunityIcons
+              name="cube-outline"
+              size={20}
+              color="#fff"
+            />
+            <Text style={styles.actionText}>Products</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.actionBtn, { backgroundColor: "#F59E0B" }]}
+            onPress={() => navigation.navigate("Beneficiaries")}
           >
-            <Text style={styles.actionText}>Generate Report</Text>
+            <MaterialCommunityIcons name="hand-heart" size={20} color="#fff" />
+            <Text style={styles.actionText}>Beneficiaries</Text>
           </TouchableOpacity>
         </View>
       </Card>
@@ -332,15 +371,14 @@ const HomeScreen = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F9FAFB", padding: 15 },
+  centerContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
     marginBottom: 20,
   },
   greeting: { fontSize: 20, fontWeight: "600", color: "#111827" },
-  headerRight: { flexDirection: "row", alignItems: "center", gap: 12 },
-  avatar: { width: 40, height: 40, borderRadius: 20, marginLeft: 10 },
+  greetingHighlight: { fontWeight: "bold", color: "blue" },
 
   statsGrid: {
     flexDirection: "row",
@@ -379,22 +417,22 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     color: "#374151",
   },
+
+  actionsRow: { flexDirection: "column", alignItems: "center", marginTop: 10 },
+  actionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    width: "100%",
+    marginBottom: 12,
+  },
+  actionText: { color: "#fff", fontSize: 16, marginLeft: 8 },
+
   activityItem: { flexDirection: "row", alignItems: "center", marginBottom: 8 },
   activityText: { marginLeft: 8, fontSize: 14, color: "#374151" },
-
-  actionsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 10,
-  },
-  actionBtn: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 8,
-    marginHorizontal: 4,
-    alignItems: "center",
-  },
-  actionText: { color: "#fff", fontWeight: "600", fontSize: 14 },
 });
 
 export default HomeScreen;

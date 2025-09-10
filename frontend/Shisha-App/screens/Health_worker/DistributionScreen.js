@@ -3,7 +3,6 @@ import {
   View,
   Text,
   ScrollView,
-  Alert,
   StyleSheet,
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -40,14 +39,25 @@ const DistributionScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedType, setSelectedType] = useState("All");
-  const [currentPage, setCurrentPage] = useState(1);
+
+  // Expanded card state for mobile view
+  const [expandedCardId, setExpandedCardId] = useState(null);
 
   const { user } = useAuth();
 
   const [beneficiaries, setBeneficiaries] = useState([]);
   const [products, setProducts] = useState([]);
 
-  const [modalVisible, setModalVisible] = useState(false);
+  // Modal states
+  const [addModalVisible, setAddModalVisible] = useState(false);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState(null);
+  const [messageModal, setMessageModal] = useState({
+    visible: false,
+    title: "",
+    body: "",
+  });
+
   const [newDistribution, setNewDistribution] = useState({
     beneficiaryId: "",
     productId: "",
@@ -66,7 +76,10 @@ const DistributionScreen = ({ navigation }) => {
     Poppins_700Bold,
   });
 
-  const itemsPerPage = 10;
+  // Helper function for showing messages in a modal
+  const showMessage = (title, body) => {
+    setMessageModal({ visible: true, title, body });
+  };
 
   // Fetch data
   useEffect(() => {
@@ -80,7 +93,7 @@ const DistributionScreen = ({ navigation }) => {
       const data = await getAllDistributions();
       setDistributions(data);
     } catch (error) {
-      Alert.alert("Error", "Failed to fetch distributions.");
+      showMessage("Error", "Failed to fetch distributions.");
     } finally {
       setLoading(false);
     }
@@ -93,7 +106,7 @@ const DistributionScreen = ({ navigation }) => {
       const data = await BeneficiaryService.getBeneficiary(userId);
       setBeneficiaries(data);
     } catch (error) {
-      Alert.alert("Error", "Failed to load beneficiaries.");
+      showMessage("Error", "Failed to load beneficiaries.");
     }
   };
 
@@ -102,7 +115,7 @@ const DistributionScreen = ({ navigation }) => {
       const data = await getAllProducts();
       setProducts(data);
     } catch (error) {
-      Alert.alert("Error", "Failed to load products.");
+      showMessage("Error", "Failed to load products.");
     }
   };
 
@@ -110,41 +123,37 @@ const DistributionScreen = ({ navigation }) => {
   const filteredDistributions = useMemo(() => {
     let filtered = distributions;
     if (selectedType !== "All") {
-      filtered = filtered.filter((d) => d.beneficiaryId.type === selectedType);
+      filtered = filtered.filter((d) => d.beneficiaryId?.type === selectedType);
     }
     if (searchQuery.trim()) {
       filtered = filtered.filter((d) =>
-        d.beneficiaryId.name.toLowerCase().includes(searchQuery.toLowerCase())
+        d.beneficiaryId?.name?.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
     return filtered;
   }, [distributions, selectedType, searchQuery]);
 
-  // Pagination
-  const paginatedDistributions = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return filteredDistributions.slice(start, start + itemsPerPage);
-  }, [filteredDistributions, currentPage]);
-
-  const totalPages = Math.ceil(filteredDistributions.length / itemsPerPage);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [selectedType, searchQuery]);
+  // Function to toggle card expansion
+  const toggleExpand = (id) => {
+    setExpandedCardId(expandedCardId === id ? null : id);
+  };
 
   // Delete
   const handleDelete = (id) => {
-    Alert.alert("Delete Distribution", "Confirm delete?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          await deleteDistribution(id);
-          fetchDistributions();
-        },
-      },
-    ]);
+    setItemToDelete(id);
+    setDeleteModalVisible(true);
+  };
+
+  const confirmDelete = async () => {
+    try {
+      await deleteDistribution(itemToDelete);
+      fetchDistributions();
+      setDeleteModalVisible(false);
+      setItemToDelete(null);
+      showMessage("Success", "Distribution deleted successfully.");
+    } catch (error) {
+      showMessage("Error", "Failed to delete distribution.");
+    }
   };
 
   // Add new
@@ -154,7 +163,7 @@ const DistributionScreen = ({ navigation }) => {
       !newDistribution.productId ||
       !newDistribution.quantityKg
     ) {
-      return Alert.alert("Error", "Please fill all fields");
+      return showMessage("Error", "Please fill all fields");
     }
     setAddingDistribution(true);
 
@@ -163,12 +172,12 @@ const DistributionScreen = ({ navigation }) => {
         ...newDistribution,
         userId: user.id, // from AuthContext
       });
-      Alert.alert("Success", "Distribution added successfully");
-      setModalVisible(false);
+      showMessage("Success", "Distribution added successfully");
+      setAddModalVisible(false);
       setNewDistribution({ beneficiaryId: "", productId: "", quantityKg: "" });
       fetchDistributions();
     } catch (error) {
-      Alert.alert("Error", error.message || "Failed to add distribution");
+      showMessage("Error", error.message || "Failed to add distribution");
     } finally {
       setAddingDistribution(false);
     }
@@ -203,7 +212,7 @@ const DistributionScreen = ({ navigation }) => {
               icon="plus"
               mode="contained"
               buttonColor="#007AFF"
-              onPress={() => setModalVisible(true)}
+              onPress={() => setAddModalVisible(true)}
               style={styles.button}
             >
               Add Distribution
@@ -250,122 +259,100 @@ const DistributionScreen = ({ navigation }) => {
           </Card.Content>
         </Card>
 
-        {/* Table */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.tableScroll}
-        >
-          <View style={styles.tableWrapper}>
-            <View style={styles.tableHeader}>
-              <Text style={[styles.headerText, styles.nameColumn]}>
-                Beneficiary
-              </Text>
-              <Text style={[styles.headerText, styles.typeColumn]}>Type</Text>
-              <Text style={[styles.headerText, styles.productColumn]}>
-                Product
-              </Text>
-              <Text style={[styles.headerText, styles.quantityColumn]}>
-                Quantity (kg)
-              </Text>
-              <Text style={[styles.headerText, styles.dateColumn]}>Date</Text>
-              <Text style={[styles.headerText, styles.actionsColumn]}>
-                Actions
-              </Text>
-            </View>
-
-            {paginatedDistributions.length > 0 ? (
-              paginatedDistributions.map((d, i) => (
-                <View
-                  key={d._id}
-                  style={[
-                    styles.userRow,
-                    i % 2 === 0 ? styles.evenRow : styles.oddRow,
-                  ]}
-                >
-                  <Text style={[styles.cellText, styles.nameColumn]}>
-                    {`${d.beneficiaryId.firstName} ${d.beneficiaryId.lastName}`}
-                  </Text>
-                  <Text style={[styles.cellText, styles.typeColumn]}>
-                    {d.beneficiaryId.type}
-                  </Text>
-                  <Text style={[styles.cellText, styles.productColumn]}>
-                    {d.productId.name}
-                  </Text>
-                  <Text style={[styles.cellText, styles.quantityColumn]}>
-                    {d.quantityKg}
-                  </Text>
-                  <Text style={[styles.cellText, styles.dateColumn]}>
-                    {new Date(d.distributionDate).toLocaleDateString()}
-                  </Text>
-                  <View style={[styles.actions, styles.actionsColumn]}>
+        {/* Distribution List (Cards) */}
+        {filteredDistributions.length > 0 ? (
+          <ScrollView style={styles.stockList}>
+            {filteredDistributions.map((d) => (
+              <Card
+                key={d._id}
+                style={styles.distributionCard}
+                onPress={() => toggleExpand(d._id)}
+              >
+                <Card.Content>
+                  <View style={styles.cardHeader}>
+                    <View style={styles.titleAndValue}>
+                      <Text style={styles.cardTitle}>
+                        {d.productId?.name || "Product N/A"}
+                      </Text>
+                      <Text style={styles.cardValue}>
+                        {d.quantityKg !== undefined
+                          ? `${d.quantityKg} kg`
+                          : "N/A"}
+                      </Text>
+                    </View>
                     <IconButton
-                      icon="pencil"
-                      size={18}
-                      iconColor="#3498db"
-                      onPress={() =>
-                        navigation.navigate("EditDistribution", {
-                          distribution: d,
-                        })
+                      icon={
+                        expandedCardId === d._id ? "chevron-up" : "chevron-down"
                       }
-                    />
-                    <IconButton
-                      icon="delete"
-                      size={18}
-                      iconColor="#e74c3c"
-                      onPress={() => handleDelete(d._id)}
+                      size={20}
+                      iconColor="#7f8c8d"
+                      onPress={() => toggleExpand(d._id)}
                     />
                   </View>
-                </View>
-              ))
-            ) : (
-              <Text style={styles.empty}>No distributions found</Text>
-            )}
-          </View>
-        </ScrollView>
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <Card style={styles.paginationCard}>
-            <Card.Content style={styles.paginationContainer}>
-              <Button
-                mode="contained"
-                onPress={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-              >
-                Previous
-              </Button>
-              <Text style={styles.pageInfo}>
-                Page {currentPage} of {totalPages || 1}
-              </Text>
-              <Button
-                mode="contained"
-                onPress={() =>
-                  setCurrentPage((p) => Math.min(totalPages, p + 1))
-                }
-                disabled={currentPage === totalPages}
-              >
-                Next
-              </Button>
-            </Card.Content>
-          </Card>
+                  {expandedCardId === d._id && (
+                    <View style={styles.expandedContent}>
+                      <View style={styles.cardDetails}>
+                        <Text style={styles.cardLabel}>Beneficiary:</Text>
+                        <Text style={styles.cardDetailValue}>
+                          {`${d.beneficiaryId?.firstName} ${d.beneficiaryId?.lastName}`.trim() ||
+                            "N/A"}
+                        </Text>
+                      </View>
+                      <View style={styles.cardDetails}>
+                        <Text style={styles.cardLabel}>Type:</Text>
+                        <Text style={styles.cardDetailValue}>
+                          {d.beneficiaryId?.type || "N/A"}
+                        </Text>
+                      </View>
+                      <View style={styles.cardDetails}>
+                        <Text style={styles.cardLabel}>Date:</Text>
+                        <Text style={styles.cardDetailValue}>
+                          {new Date(d.distributionDate).toLocaleDateString() ||
+                            "N/A"}
+                        </Text>
+                      </View>
+                      <View style={styles.cardDetails}>
+                        <Button
+                          mode="text"
+                          onPress={() =>
+                            navigation.navigate("EditDistribution", {
+                              distribution: d,
+                            })
+                          }
+                          labelStyle={styles.editButton}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          mode="text"
+                          onPress={() => handleDelete(d._id)}
+                          labelStyle={styles.deleteButton}
+                        >
+                          Delete
+                        </Button>
+                      </View>
+                    </View>
+                  )}
+                </Card.Content>
+              </Card>
+            ))}
+          </ScrollView>
+        ) : (
+          <Text style={styles.empty}>No distributions found.</Text>
         )}
 
         {/* Add Modal */}
-        <Modal animationType="slide" transparent visible={modalVisible}>
+        <Modal animationType="slide" transparent visible={addModalVisible}>
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
               <Text style={styles.modalTitle}>Add Distribution</Text>
               <ScrollView>
-                {/* Beneficiary Dropdown */}
-
-                {/* Beneficiary Dropdown */}
                 <Text style={styles.label}>Beneficiary</Text>
                 <DropDownPicker
                   open={beneficiaryOpen}
                   value={newDistribution.beneficiaryId}
                   items={beneficiaries.map((b) => ({
-                    label: `${b.firstName} ${b.lastName}`.trim(), // 👈 fallback if no name
+                    label: `${b.firstName} ${b.lastName}`.trim(),
                     value: b._id,
                   }))}
                   setOpen={setBeneficiaryOpen}
@@ -385,7 +372,6 @@ const DistributionScreen = ({ navigation }) => {
                   zIndexInverse={1000}
                 />
 
-                {/* Product Dropdown */}
                 <Text style={styles.label}>Product</Text>
                 <DropDownPicker
                   open={productOpen}
@@ -411,7 +397,6 @@ const DistributionScreen = ({ navigation }) => {
                   zIndexInverse={2000}
                 />
 
-                {/* Quantity */}
                 <TextInput
                   label="Quantity (Kg)"
                   value={newDistribution.quantityKg}
@@ -427,7 +412,7 @@ const DistributionScreen = ({ navigation }) => {
               <View style={styles.modalButtons}>
                 <Button
                   mode="outlined"
-                  onPress={() => setModalVisible(false)}
+                  onPress={() => setAddModalVisible(false)}
                   style={styles.modalButton}
                   disabled={addingDistribution}
                 >
@@ -447,6 +432,62 @@ const DistributionScreen = ({ navigation }) => {
             </View>
           </View>
         </Modal>
+
+        {/* Delete Confirmation Modal */}
+        <Modal animationType="fade" transparent visible={deleteModalVisible}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Confirm Deletion</Text>
+              <Text style={{ textAlign: "center", marginBottom: 20 }}>
+                Are you sure you want to delete this distribution?
+              </Text>
+              <View style={styles.modalButtons}>
+                <Button
+                  mode="outlined"
+                  onPress={() => setDeleteModalVisible(false)}
+                  style={styles.modalButton}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  mode="contained"
+                  onPress={confirmDelete}
+                  style={styles.modalButton}
+                  buttonColor="#e74c3c"
+                >
+                  Delete
+                </Button>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Generic Message Modal */}
+        <Modal
+          animationType="fade"
+          transparent
+          visible={messageModal.visible}
+          onRequestClose={() =>
+            setMessageModal({ visible: false, title: "", body: "" })
+          }
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>{messageModal.title}</Text>
+              <Text style={{ textAlign: "center", marginBottom: 20 }}>
+                {messageModal.body}
+              </Text>
+              <Button
+                mode="contained"
+                onPress={() =>
+                  setMessageModal({ visible: false, title: "", body: "" })
+                }
+              >
+                OK
+              </Button>
+            </View>
+          </View>
+        </Modal>
       </Surface>
     </KeyboardAvoidingView>
   );
@@ -454,15 +495,81 @@ const DistributionScreen = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   keyboardAvoidingView: { flex: 1 },
-  container: { flex: 1, padding: 16, backgroundColor: "#f8f9fa" },
+  container: { flex: 1, padding: 16, backgroundColor: "#f4f6f8" },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  buttonsCard: { marginBottom: 16, elevation: 2 },
+  buttonsCard: { marginBottom: 16, elevation: 2, borderRadius: 12 },
   button: { borderRadius: 6 },
-  controlsCard: { marginBottom: 16, elevation: 2 },
-  searchInput: { marginBottom: 12, backgroundColor: "#fff" },
+  controlsCard: { marginBottom: 16, elevation: 2, borderRadius: 12 },
+  searchInput: { marginBottom: 12, backgroundColor: "#fff", borderRadius: 8 },
   filterContainer: { flexDirection: "row", flexWrap: "wrap", marginTop: 4 },
-  chip: { marginRight: 6, marginBottom: 6, backgroundColor: "#ecf0f1" },
-  selectedChip: { marginRight: 6, marginBottom: 6, backgroundColor: "#007AFF" },
+  chip: {
+    marginRight: 6,
+    marginBottom: 6,
+    backgroundColor: "#ecf0f1",
+    borderRadius: 12,
+  },
+  selectedChip: {
+    marginRight: 6,
+    marginBottom: 6,
+    backgroundColor: "#007AFF",
+    borderRadius: 12,
+  },
+
+  // New Styles for Cards
+  distributionCard: {
+    marginBottom: 12,
+    borderRadius: 12,
+    elevation: 2,
+    backgroundColor: "#fff",
+  },
+  cardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingBottom: 8,
+  },
+  titleAndValue: {
+    flex: 1,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingRight: 10,
+  },
+  cardTitle: {
+    fontFamily: "Poppins_600SemiBold",
+    fontSize: 16,
+    color: "#2c3e50",
+  },
+  cardValue: {
+    fontFamily: "Poppins_700Bold",
+    fontSize: 16,
+    color: "#007AFF",
+  },
+  expandedContent: {
+    marginTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: "#ecf0f1",
+    paddingTop: 8,
+  },
+  cardDetails: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  cardLabel: {
+    fontFamily: "Poppins_600SemiBold",
+    color: "#7f8c8d",
+  },
+  cardDetailValue: {
+    fontFamily: "Poppins_400Regular",
+    color: "#2c3e50",
+    textAlign: "right",
+  },
+  editButton: { color: "#3498db" },
+  deleteButton: { color: "#e74c3c" },
+
+  // Old styles that are not needed anymore
   tableScroll: { flex: 1 },
   tableWrapper: { minWidth: 700, backgroundColor: "#fff", borderRadius: 8 },
   tableHeader: {
@@ -496,7 +603,14 @@ const styles = StyleSheet.create({
   dateColumn: { width: 100 },
   actionsColumn: { width: 100, flexDirection: "row", justifyContent: "center" },
   actions: { flexDirection: "row" },
-  empty: { textAlign: "center", padding: 40, color: "#7f8c8d" },
+
+  // Modal Styles
+  empty: {
+    textAlign: "center",
+    padding: 40,
+    color: "#7f8c8d",
+    fontFamily: "Poppins_400Regular",
+  },
   paginationCard: { elevation: 2 },
   paginationContainer: {
     flexDirection: "row",
@@ -508,13 +622,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 20,
   },
   modalContent: {
     backgroundColor: "#fff",
     borderRadius: 12,
     padding: 20,
     width: "100%",
-    marginHorizontal: 0,
   },
   modalTitle: {
     fontSize: 20,
@@ -523,37 +638,25 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   label: { fontWeight: "600", marginTop: 12, marginBottom: 4 },
-  input: { marginTop: 8, backgroundColor: "#fff" },
-  dropdown: { marginBottom: 16, borderColor: "#ccc" },
+  input: { marginTop: 8, backgroundColor: "#fff", borderRadius: 8 },
+  dropdown: { marginBottom: 16, borderColor: "#ccc", borderRadius: 8 },
   modalButtons: {
     flexDirection: "row",
     justifyContent: "space-between",
     marginTop: 20,
   },
-  modalButton: { flex: 1, marginHorizontal: 8 },
-  label: {
-    fontSize: 14,
-    fontWeight: "600",
-    marginBottom: 6,
-    color: "#2c3e50",
-  },
-  dropdown: {
-    borderColor: "#ccc",
-    borderWidth: 1,
-    borderRadius: 8,
-    backgroundColor: "#f9f9f9", // light gray so white text shows
-    marginBottom: 15,
-  },
+  modalButton: { flex: 1, marginHorizontal: 8, borderRadius: 6 },
   dropdownContainer: {
     borderColor: "#ccc",
-    backgroundColor: "#fff", // dropdown list background
+    backgroundColor: "#fff",
+    borderRadius: 8,
   },
   dropdownText: {
     fontSize: 14,
-    color: "#2c3e50", // dark text
+    color: "#2c3e50",
   },
   placeholder: {
-    color: "#888", // gray placeholder
+    color: "#888",
     fontSize: 14,
   },
 });

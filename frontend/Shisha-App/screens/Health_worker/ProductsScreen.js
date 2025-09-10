@@ -2,22 +2,24 @@ import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
-  Alert,
+  ScrollView,
   StyleSheet,
   ActivityIndicator,
-  ScrollView,
   KeyboardAvoidingView,
+  Dimensions,
+  Alert,
+  Platform,
 } from "react-native";
 import {
   TextInput,
-  Button,
   Card,
+  Button,
   IconButton,
-  Chip,
   Surface,
   Modal,
   Portal,
   Provider,
+  Menu,
 } from "react-native-paper";
 import {
   useFonts,
@@ -32,19 +34,20 @@ import {
   updateProduct,
 } from "../../services/ProductService.js";
 
+const { height: SCREEN_HEIGHT } = Dimensions.get("window");
+
 const ProductScreen = ({ navigation }) => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
-  const categories = ["All"];
-  const [selectedCategory, setSelectedCategory] = useState("All");
 
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [editName, setEditName] = useState("");
   const [editDescription, setEditDescription] = useState("");
+
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [sortOption, setSortOption] = useState("Newest");
 
   const [fontsLoaded] = useFonts({
     Poppins_400Regular,
@@ -54,20 +57,18 @@ const ProductScreen = ({ navigation }) => {
   });
 
   useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const data = await getAllProducts();
+        setProducts(data || []);
+      } catch (error) {
+        Alert.alert("Error", "Failed to fetch products.");
+      } finally {
+        setLoading(false);
+      }
+    };
     fetchProducts();
   }, []);
-
-  const fetchProducts = async () => {
-    try {
-      const data = await getAllProducts();
-      setProducts(data || []);
-    } catch (error) {
-      console.error(error);
-      Alert.alert("Error", "Failed to fetch products.");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleDelete = (id) => {
     Alert.alert(
@@ -99,7 +100,7 @@ const ProductScreen = ({ navigation }) => {
     setEditModalVisible(true);
   };
 
-  const handleUpdate = async ({}) => {
+  const handleUpdate = async () => {
     if (!editName.trim()) {
       Alert.alert("Validation Error", "Product name is required");
       return;
@@ -117,124 +118,156 @@ const ProductScreen = ({ navigation }) => {
       Alert.alert("Error", error.message);
     }
   };
+
   const handleAddProduct = () => {
     navigation.navigate("AddProduct");
   };
 
   const filteredProducts = useMemo(() => {
-    let filtered = products;
-    if (selectedCategory !== "All")
-      filtered = filtered.filter((p) => p.category === selectedCategory);
-    if (searchQuery.trim())
+    let filtered = [...products]; // Create a copy to avoid mutating state directly
+
+    if (searchQuery.trim()) {
       filtered = filtered.filter(
         (p) =>
           p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
           (p.description &&
             p.description.toLowerCase().includes(searchQuery.toLowerCase()))
       );
+    }
+
+    switch (sortOption) {
+      case "Name A-Z":
+        filtered.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+      case "Name Z-A":
+        filtered.sort((a, b) => b.name.localeCompare(a.name));
+        break;
+      case "Oldest":
+        filtered.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+        break;
+      default: // Newest
+        filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    }
+
     return filtered;
-  }, [products, searchQuery, selectedCategory]);
-
-  const paginatedProducts = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return filteredProducts.slice(start, start + itemsPerPage);
-  }, [filteredProducts, currentPage]);
-
-  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
-
-  const renderHeader = () => (
-    <View style={styles.tableHeader}>
-      <Text style={[styles.headerText, styles.nameColumn]}>Name</Text>
-      <Text style={[styles.headerText, styles.descriptionColumn]}>
-        Description
-      </Text>
-    </View>
-  );
-
-  const renderRow = (product, index) => (
-    <View
-      key={product._id}
-      style={[styles.row, index % 2 === 0 ? styles.evenRow : styles.oddRow]}
-    >
-      <Text style={[styles.cellText, styles.nameColumn]}>{product.name}</Text>
-      <Text style={[styles.cellText, styles.descriptionColumn]}>
-        {product.description || "N/A"}
-      </Text>
-    </View>
-  );
-
-  const renderPagination = () => (
-    <View style={styles.paginationContainer}>
-      <Button
-        mode="contained"
-        disabled={currentPage === 1}
-        onPress={() => setCurrentPage((p) => Math.max(1, p - 1))}
-      >
-        Previous
-      </Button>
-      <Text style={styles.pageInfo}>
-        Page {currentPage} of {totalPages || 1}
-      </Text>
-      <Button
-        mode="contained"
-        disabled={currentPage === totalPages}
-        onPress={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-      >
-        Next
-      </Button>
-    </View>
-  );
+  }, [products, searchQuery, sortOption]);
 
   if (loading || !fontsLoaded) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color="#007AFF" />
       </View>
     );
   }
 
   return (
     <Provider>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
         <Surface style={styles.container}>
-          {/* Search */}
-          <Card style={styles.card}>
-            <Card.Content>
-              <TextInput
-                placeholder="Search products..."
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                left={<TextInput.Icon icon="magnify" />}
-                right={
-                  searchQuery ? (
-                    <TextInput.Icon
-                      icon="close"
-                      onPress={() => setSearchQuery("")}
-                    />
-                  ) : null
-                }
-                mode="outlined"
-                style={styles.searchInput}
-              />
-            </Card.Content>
-          </Card>
-
-          {/* Table */}
-          <View style={styles.tableCard}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <View style={styles.tableWrapper}>
-                {renderHeader()}
-                {paginatedProducts.length > 0 ? (
-                  paginatedProducts.map((p, idx) => renderRow(p, idx))
-                ) : (
-                  <Text style={styles.empty}>No products found</Text>
-                )}
-              </View>
-            </ScrollView>
+          {/* Header with Title and Add Button */}
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>Products</Text>
+            <IconButton
+              icon="plus-circle"
+              size={35}
+              iconColor="#27ae60"
+              onPress={handleAddProduct}
+            />
           </View>
 
-          {/* Pagination */}
-          {totalPages > 1 && renderPagination()}
+          {/* Search and Sort Filter Section */}
+          <View style={styles.filtersRow}>
+            <TextInput
+              placeholder="Search products..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              left={<TextInput.Icon icon="magnify" />}
+              right={
+                searchQuery ? (
+                  <TextInput.Icon
+                    icon="close"
+                    onPress={() => setSearchQuery("")}
+                  />
+                ) : null
+              }
+              mode="outlined"
+              style={styles.searchInput}
+              outlineColor="#dcdcdc"
+              theme={{ roundness: 10 }}
+            />
+            <Menu
+              visible={menuVisible}
+              onDismiss={() => setMenuVisible(false)}
+              anchor={
+                <Button
+                  mode="outlined"
+                  onPress={() => setMenuVisible(true)}
+                  style={styles.sortButton}
+                  labelStyle={styles.sortButtonLabel}
+                  contentStyle={{ paddingHorizontal: 0 }}
+                  icon="filter-variant"
+                >
+                  {sortOption}
+                </Button>
+              }
+            >
+              {["Newest", "Oldest", "Name A-Z", "Name Z-A"].map((option) => (
+                <Menu.Item
+                  key={option}
+                  onPress={() => {
+                    setSortOption(option);
+                    setMenuVisible(false);
+                  }}
+                  title={option}
+                />
+              ))}
+            </Menu>
+          </View>
+
+          {/* Product List */}
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            style={[styles.productList, { maxHeight: SCREEN_HEIGHT * 0.7 }]}
+          >
+            {filteredProducts.length === 0 && (
+              <Text style={styles.emptyText}>No products found.</Text>
+            )}
+            {filteredProducts.map((product) => (
+              <Card key={product._id} style={styles.productCard}>
+                <View style={styles.cardContent}>
+                  <View style={styles.textContainer}>
+                    <Text style={styles.productName} numberOfLines={1}>
+                      {product.name}
+                    </Text>
+                    {product.description ? (
+                      <Text style={styles.productDescription} numberOfLines={2}>
+                        {product.description}
+                      </Text>
+                    ) : null}
+                  </View>
+                  <View style={styles.actionsContainer}>
+                    <IconButton
+                      icon="pencil"
+                      size={20}
+                      iconColor="#f39c12"
+                      onPress={() => openEditModal(product)}
+                      style={{ margin: 0 }}
+                    />
+                    <IconButton
+                      icon="delete"
+                      size={20}
+                      iconColor="#e74c3c"
+                      onPress={() => handleDelete(product._id)}
+                      style={{ margin: 0 }}
+                    />
+                  </View>
+                </View>
+              </Card>
+            ))}
+          </ScrollView>
 
           {/* Edit Modal */}
           <Portal>
@@ -243,12 +276,14 @@ const ProductScreen = ({ navigation }) => {
               onDismiss={() => setEditModalVisible(false)}
               contentContainerStyle={styles.modal}
             >
+              <Text style={styles.modalTitle}>Edit Product</Text>
               <TextInput
                 label="Product Name"
                 value={editName}
                 onChangeText={setEditName}
                 mode="outlined"
                 style={styles.input}
+                outlineColor="#dcdcdc"
               />
               <TextInput
                 label="Description"
@@ -256,22 +291,27 @@ const ProductScreen = ({ navigation }) => {
                 onChangeText={setEditDescription}
                 mode="outlined"
                 multiline
-                style={styles.input}
+                numberOfLines={3}
+                style={[styles.input, styles.descriptionInput]}
+                outlineColor="#dcdcdc"
               />
-              <Button
-                mode="contained"
-                onPress={handleUpdate}
-                buttonColor="#007AFF"
-                style={{ marginBottom: 8 }}
-              >
-                Update
-              </Button>
-              <Button
-                mode="outlined"
-                onPress={() => setEditModalVisible(false)}
-              >
-                Cancel
-              </Button>
+              <View style={styles.modalActions}>
+                <Button
+                  mode="outlined"
+                  onPress={() => setEditModalVisible(false)}
+                  style={styles.modalButton}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  mode="contained"
+                  onPress={handleUpdate}
+                  buttonColor="#007AFF"
+                  style={styles.modalButton}
+                >
+                  Update
+                </Button>
+              </View>
             </Modal>
           </Portal>
         </Surface>
@@ -281,64 +321,121 @@ const ProductScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: "#f8f9fa" },
-  center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  card: { marginBottom: 16, elevation: 2 },
-  searchInput: { backgroundColor: "#fff", height: 40 },
-  tableCard: { flex: 1, elevation: 2 },
-  tableWrapper: { minWidth: 400, backgroundColor: "#fff" },
-  tableHeader: {
-    flexDirection: "row",
-    backgroundColor: "#34495e",
-    padding: 8,
-    borderTopLeftRadius: 6,
-    borderTopRightRadius: 6,
+  container: {
+    flex: 1,
+    padding: 20,
+    backgroundColor: "#F0F2F5",
   },
-  headerText: {
-    color: "#fff",
-    fontFamily: "Poppins_600SemiBold",
-    fontSize: 14,
-    textAlign: "center",
+  center: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
-  row: {
-    flexDirection: "row",
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: "#ecf0f1",
-  },
-  evenRow: { backgroundColor: "#f8f9fa" },
-  oddRow: { backgroundColor: "#fff" },
-  cellText: {
-    fontSize: 13,
-    fontFamily: "Poppins_400Regular",
-    textAlign: "center",
-    color: "#2c3e50",
-  },
-  nameColumn: { width: 150, textAlign: "left" },
-  descriptionColumn: { width: 250, textAlign: "left" },
-  actionsColumn: { width: 100, flexDirection: "row", justifyContent: "center" },
-  paginationContainer: {
+  header: {
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingHorizontal: 10,
-    marginTop: 10,
+    alignItems: "center",
+    marginBottom: 20,
+    marginTop: Platform.OS === "android" ? 20 : 0, // Add a bit of top margin for Android
   },
-  pageInfo: {
+  headerTitle: {
+    fontSize: 32,
+    fontFamily: "Poppins_700Bold",
+    color: "#2c3e50",
+  },
+  filtersRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 15,
+  },
+  searchInput: {
+    flex: 1,
+    marginRight: 10,
+    height: 50,
+    backgroundColor: "#fff",
+  },
+  sortButton: {
+    height: 50,
+    justifyContent: "center",
+    borderRadius: 10,
+    borderColor: "#dcdcdc",
+  },
+  sortButtonLabel: {
+    fontFamily: "Poppins_500Medium",
     fontSize: 14,
-    fontFamily: "Poppins_600SemiBold",
-    color: "#7f8c8d",
-    alignSelf: "center",
+    color: "#555",
   },
-  empty: {
+  productList: {
+    paddingHorizontal: 0,
+  },
+  productCard: {
+    marginBottom: 12,
+    borderRadius: 15,
+    elevation: 4,
+    backgroundColor: "#fff",
+  },
+  cardContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 15,
+  },
+  textContainer: {
+    flex: 1,
+    marginRight: 10,
+  },
+  productName: {
+    fontSize: 18,
+    fontFamily: "Poppins_600SemiBold",
+    color: "#34495e",
+  },
+  productDescription: {
+    fontSize: 14,
+    fontFamily: "Poppins_400Regular",
+    color: "#7f8c8d",
+    marginTop: 5,
+  },
+  actionsContainer: {
+    flexDirection: "row",
+  },
+  emptyText: {
     textAlign: "center",
     fontSize: 16,
     color: "#7f8c8d",
-    padding: 40,
+    marginTop: 40,
     fontStyle: "italic",
+    fontFamily: "Poppins_400Regular",
   },
-  modal: { backgroundColor: "white", padding: 20, margin: 20, borderRadius: 8 },
-  input: { marginBottom: 16, backgroundColor: "#fff" },
+  modal: {
+    backgroundColor: "white",
+    padding: 30,
+    margin: 20,
+    borderRadius: 20,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontFamily: "Poppins_600SemiBold",
+    marginBottom: 20,
+    textAlign: "center",
+    color: "#34495e",
+  },
+  input: {
+    marginBottom: 15,
+    backgroundColor: "#fff",
+  },
+  descriptionInput: {
+    height: 100,
+  },
+  modalActions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 10,
+  },
+  modalButton: {
+    flex: 1,
+    marginHorizontal: 5,
+    borderRadius: 10,
+  },
 });
 
 export default ProductScreen;

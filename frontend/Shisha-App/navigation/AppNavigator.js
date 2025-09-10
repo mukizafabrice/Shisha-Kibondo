@@ -282,7 +282,12 @@ const AppNavigator = () => {
           <Stack.Screen
             name="Beneficiaries"
             component={BeneficiariesScreen}
-            options={{ title: "Beneficiaries" }}
+            options={{
+              title: "Beneficiaries",
+              headerStyle: { backgroundColor: "#007AFF" },
+              headerTintColor: "#fff",
+              headerTitleStyle: { fontWeight: "bold" },
+            }}
           />
           <Stack.Screen
             name="BeneficiaryDetails"
@@ -292,7 +297,7 @@ const AppNavigator = () => {
           <Stack.Screen
             name="AddBeneficiary"
             component={AddBeneficiaryScreen}
-            options={{ title: "Add Beneficiary", presentation: "modal" }}
+            options={{ title: "Beneficiary", presentation: "modal" }}
           />
           <Stack.Screen
             name="AddDistribution"

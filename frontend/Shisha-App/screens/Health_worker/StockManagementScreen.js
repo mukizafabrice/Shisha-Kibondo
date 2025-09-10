@@ -3,11 +3,9 @@ import {
   View,
   Text,
   ScrollView,
-  Alert,
   StyleSheet,
   ActivityIndicator,
   KeyboardAvoidingView,
-  Modal,
 } from "react-native";
 import {
   TextInput,
@@ -15,7 +13,6 @@ import {
   Card,
   IconButton,
   Surface,
-  FAB,
 } from "react-native-paper";
 import DropDownPicker from "react-native-dropdown-picker";
 import {
@@ -26,31 +23,17 @@ import {
   Poppins_700Bold,
 } from "@expo-google-fonts/poppins";
 
-import {
-  getAllStocks,
-  createStock,
-  deleteStock,
-} from "../../services/stockService";
-import { getAllProducts } from "../../services/ProductService";
-import { useAuth } from "../../context/AuthContext";
+// Assuming these services exist and are functional
+import { getAllStocks } from "../../services/stockService";
 
 const StockScreen = ({ navigation }) => {
   const [stocks, setStocks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
 
-  const { user } = useAuth();
-
-  const [products, setProducts] = useState([]);
-
-  // Modal state
-  const [modalVisible, setModalVisible] = useState(false);
-  const [newStock, setNewStock] = useState({ productId: "", totalStock: "" });
-  const [saving, setSaving] = useState(false);
-
-  // Dropdown state
-  const [productOpen, setProductOpen] = useState(false);
+  // Filter state
+  const [userOpen, setUserOpen] = useState(false);
+  const [filterUser, setFilterUser] = useState(null);
 
   const [fontsLoaded] = useFonts({
     Poppins_400Regular,
@@ -59,89 +42,50 @@ const StockScreen = ({ navigation }) => {
     Poppins_700Bold,
   });
 
-  const itemsPerPage = 10;
-
   useEffect(() => {
     fetchStocks();
-    fetchProducts();
   }, []);
 
   const fetchStocks = async () => {
     try {
+      setLoading(true);
       const data = await getAllStocks();
       setStocks(data);
     } catch (error) {
-      Alert.alert("Error", "Failed to fetch stocks.");
+      console.error("Failed to fetch stocks:", error);
+      // In a real app, you might use a custom toast or alert here
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchProducts = async () => {
-    try {
-      const data = await getAllProducts();
-      setProducts(data);
-    } catch (error) {
-      Alert.alert("Error", "Failed to load products.");
-    }
-  };
+  const users = useMemo(() => {
+    const uniqueUsers = new Set();
+    const userList = [];
+    stocks.forEach((stock) => {
+      const user = stock.userId;
+      if (user && user.name && !uniqueUsers.has(user._id)) {
+        uniqueUsers.add(user._id);
+        userList.push({ label: user.name, value: user._id });
+      }
+    });
+    return userList;
+  }, [stocks]);
 
-  // Filter
   const filteredStocks = useMemo(() => {
     let filtered = stocks;
+    // Filter by search query
     if (searchQuery.trim()) {
       filtered = filtered.filter((s) =>
         s.productId?.name?.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
+    // Filter by user
+    if (filterUser) {
+      filtered = filtered.filter((s) => s.userId?._id === filterUser);
+    }
     return filtered;
-  }, [stocks, searchQuery]);
-
-  // Pagination
-  const paginatedStocks = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return filteredStocks.slice(start, start + itemsPerPage);
-  }, [filteredStocks, currentPage]);
-
-  const totalPages = Math.ceil(filteredStocks.length / itemsPerPage);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery]);
-
-  // Delete
-  const handleDelete = (id) => {
-    Alert.alert("Delete Stock", "Confirm delete?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          await deleteStock(id);
-          fetchStocks();
-        },
-      },
-    ]);
-  };
-
-  // Save new stock
-  const handleSaveStock = async () => {
-    if (!newStock.productId || !newStock.totalStock) {
-      Alert.alert("Error", "Please select a product and enter stock.");
-      return;
-    }
-    try {
-      setSaving(true);
-      await createStock(newStock);
-      fetchStocks();
-      setModalVisible(false);
-      setNewStock({ productId: "", totalStock: "" });
-    } catch (error) {
-      Alert.alert("Error", "Failed to create stock.");
-    } finally {
-      setSaving(false);
-    }
-  };
+  }, [stocks, searchQuery, filterUser]);
 
   if (loading || !fontsLoaded) {
     return (
@@ -168,9 +112,10 @@ const StockScreen = ({ navigation }) => {
           />
         </View>
 
-        {/* Search */}
+        {/* Controls Card */}
         <Card style={styles.controlsCard}>
           <Card.Content>
+            {/* Search Input */}
             <TextInput
               placeholder="Search by product..."
               value={searchQuery}
@@ -188,153 +133,52 @@ const StockScreen = ({ navigation }) => {
               style={styles.searchInput}
               theme={{ colors: { primary: "#007AFF" } }}
             />
+
+            {/* User Filter */}
+            <Text style={styles.filterLabel}>Filter by User</Text>
+            <DropDownPicker
+              open={userOpen}
+              value={filterUser}
+              items={users}
+              setOpen={setUserOpen}
+              setValue={setFilterUser}
+              placeholder="Select a user"
+              style={styles.dropdown}
+              containerStyle={styles.dropdownContainer}
+              dropDownContainerStyle={styles.dropdownInnerContainer}
+              theme="LIGHT"
+              listMode="SCROLLVIEW"
+            />
           </Card.Content>
         </Card>
 
-        {/* Table */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.tableScroll}
-        >
-          <View style={styles.tableWrapper}>
-            <View style={styles.tableHeader}>
-              <Text style={[styles.headerText, styles.productColumn]}>
-                Product
-              </Text>
-              <Text style={[styles.headerText, styles.totalColumn]}>
-                Total Stock
-              </Text>
-              <Text style={[styles.headerText, styles.userColumn]}>User</Text>
-            </View>
-
-            {paginatedStocks.length > 0 ? (
-              paginatedStocks.map((s, i) => (
-                <View
-                  key={s._id}
-                  style={[
-                    styles.userRow,
-                    i % 2 === 0 ? styles.evenRow : styles.oddRow,
-                  ]}
-                >
-                  <Text style={[styles.cellText, styles.productColumn]}>
-                    {s.productId?.name}
-                  </Text>
-                  <Text style={[styles.cellText, styles.totalColumn]}>
-                    {s.totalStock}
-                  </Text>
-                  <Text style={[styles.cellText, styles.userColumn]}>
-                    {s.userId?.name}
-                  </Text>
-                </View>
-              ))
-            ) : (
-              <Text style={styles.empty}>No stocks found</Text>
-            )}
-          </View>
-        </ScrollView>
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <Card style={styles.paginationCard}>
-            <Card.Content style={styles.paginationContainer}>
-              <Button
-                mode="outlined"
-                textColor="#007AFF"
-                onPress={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                style={styles.pageButton}
-              >
-                Previous
-              </Button>
-              <Text style={styles.pageInfo}>
-                Page {currentPage} of {totalPages || 1}
-              </Text>
-              <Button
-                mode="outlined"
-                textColor="#007AFF"
-                onPress={() =>
-                  setCurrentPage((p) => Math.min(totalPages, p + 1))
-                }
-                disabled={currentPage === totalPages}
-                style={styles.pageButton}
-              >
-                Next
-              </Button>
-            </Card.Content>
-          </Card>
+        {/* Stock List (Cards) */}
+        {filteredStocks.length > 0 ? (
+          <ScrollView style={styles.stockList}>
+            {filteredStocks.map((s) => (
+              <Card key={s._id} style={styles.stockCard}>
+                <Card.Content>
+                  <View style={styles.cardHeader}>
+                    <Text style={styles.cardTitle}>
+                      {s.productId?.name || "Product N/A"}
+                    </Text>
+                    <Text style={styles.cardStockValue}>
+                      {s.totalStock !== undefined ? s.totalStock : "N/A"}
+                    </Text>
+                  </View>
+                  <View style={styles.cardDetails}>
+                    <Text style={styles.cardLabel}>User:</Text>
+                    <Text style={styles.cardValue}>
+                      {s.userId?.name || "N/A"}
+                    </Text>
+                  </View>
+                </Card.Content>
+              </Card>
+            ))}
+          </ScrollView>
+        ) : (
+          <Text style={styles.empty}>No stocks found.</Text>
         )}
-
-        {/* Floating Add Button */}
-        <FAB
-          icon="plus"
-          style={styles.fab}
-          color="#fff"
-          onPress={() => setModalVisible(true)}
-        />
-
-        {/* Modal for Add Stock */}
-        <Modal
-          animationType="slide"
-          transparent={true}
-          visible={modalVisible}
-          onRequestClose={() => setModalVisible(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Add Stock</Text>
-
-              <Text style={styles.label}>Product</Text>
-              <DropDownPicker
-                open={productOpen}
-                value={newStock.productId}
-                items={products.map((p) => ({ label: p.name, value: p._id }))}
-                setOpen={setProductOpen}
-                setValue={(callback) =>
-                  setNewStock((prev) => ({
-                    ...prev,
-                    productId: callback(prev.productId),
-                  }))
-                }
-                placeholder="Select a product"
-                style={styles.dropdown}
-                dropDownContainerStyle={styles.dropdownContainer}
-              />
-
-              <Text style={styles.label}>Total Stock</Text>
-              <TextInput
-                value={newStock.totalStock}
-                onChangeText={(t) =>
-                  setNewStock((prev) => ({ ...prev, totalStock: t }))
-                }
-                keyboardType="numeric"
-                mode="outlined"
-                style={styles.input}
-                theme={{ colors: { primary: "#007AFF" } }}
-              />
-
-              <View style={styles.modalButtons}>
-                <Button
-                  mode="outlined"
-                  onPress={() => setModalVisible(false)}
-                  style={styles.modalButton}
-                  textColor="#7f8c8d"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  mode="contained"
-                  onPress={handleSaveStock}
-                  style={styles.modalButton}
-                  loading={saving}
-                  buttonColor="#007AFF"
-                >
-                  Save
-                </Button>
-              </View>
-            </View>
-          </View>
-        </Modal>
       </Surface>
     </KeyboardAvoidingView>
   );
@@ -363,106 +207,64 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: "#fff",
   },
-  searchInput: { marginBottom: 8, backgroundColor: "#fff", borderRadius: 8 },
-
-  tableScroll: { flex: 1 },
-  tableWrapper: {
-    minWidth: 400,
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    overflow: "hidden",
-    elevation: 2,
-  },
-  tableHeader: {
-    flexDirection: "row",
-    backgroundColor: "#007AFF",
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-  },
-  headerText: {
-    color: "#fff",
-    fontSize: 13,
+  searchInput: { marginBottom: 12, backgroundColor: "#fff", borderRadius: 8 },
+  filterLabel: {
     fontFamily: "Poppins_600SemiBold",
+    color: "#7f8c8d",
+    marginBottom: 8,
   },
-  userRow: {
+  dropdown: { borderColor: "#ccc" },
+  dropdownContainer: { marginBottom: 12 },
+  dropdownInnerContainer: { borderColor: "#ccc" },
+
+  stockList: {
+    flex: 1,
+  },
+  stockCard: {
+    marginBottom: 12,
+    borderRadius: 12,
+    elevation: 2,
+    backgroundColor: "#fff",
+  },
+  cardHeader: {
     flexDirection: "row",
-    padding: 10,
+    justifyContent: "space-between",
+    alignItems: "center",
     borderBottomWidth: 1,
     borderBottomColor: "#ecf0f1",
+    paddingBottom: 8,
+    marginBottom: 8,
   },
-  evenRow: { backgroundColor: "#f8f9fa" },
-  oddRow: { backgroundColor: "#fff" },
-  cellText: {
-    fontSize: 13,
-    fontFamily: "Poppins_400Regular",
-    textAlign: "left",
+  cardTitle: {
+    fontFamily: "Poppins_600SemiBold",
+    fontSize: 16,
     color: "#2c3e50",
   },
-  productColumn: { width: 150 },
-  totalColumn: { width: 120 },
-  userColumn: { width: 150 },
-
-  empty: { textAlign: "center", padding: 40, color: "#7f8c8d" },
-
-  paginationCard: {
-    elevation: 2,
-    borderRadius: 12,
-    marginTop: 16,
-    backgroundColor: "#fff",
+  cardStockValue: {
+    fontFamily: "Poppins_700Bold",
+    fontSize: 16,
+    color: "#007AFF",
   },
-  paginationContainer: {
+  cardDetails: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-  pageButton: { borderColor: "#007AFF", borderRadius: 8 },
-  pageInfo: {
-    fontSize: 14,
+  cardLabel: {
     fontFamily: "Poppins_600SemiBold",
+    color: "#7f8c8d",
+  },
+  cardValue: {
+    fontFamily: "Poppins_400Regular",
     color: "#2c3e50",
+    textAlign: "right",
   },
-
-  fab: {
-    position: "absolute",
-    right: 20,
-    bottom: 30,
-    backgroundColor: "#007AFF",
-  },
-
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "center",
-    padding: 16,
-  },
-  modalContent: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 20,
-    elevation: 4,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontFamily: "Poppins_700Bold",
+  empty: {
     textAlign: "center",
-    marginBottom: 20,
-    color: "#2c3e50",
+    padding: 40,
+    color: "#7f8c8d",
+    fontFamily: "Poppins_400Regular",
   },
-  label: {
-    fontFamily: "Poppins_600SemiBold",
-    marginTop: 12,
-    marginBottom: 6,
-    color: "#2c3e50",
-  },
-  input: { marginBottom: 12, backgroundColor: "#fff" },
-  dropdown: { marginBottom: 12, borderColor: "#ccc" },
-  dropdownContainer: { borderColor: "#ccc", backgroundColor: "#fff" },
-  modalButtons: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 16,
-  },
-  modalButton: { flex: 1, marginHorizontal: 6 },
 });
 
 export default StockScreen;

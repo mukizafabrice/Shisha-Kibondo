@@ -17,11 +17,25 @@ import {
 } from "react-native-paper";
 import { getTransactions } from "../../services/transactionService";
 import { getAllProducts } from "../../services/ProductService";
+import {
+  useFonts,
+  Poppins_400Regular,
+  Poppins_500Medium,
+  Poppins_600SemiBold,
+  Poppins_700Bold,
+} from "@expo-google-fonts/poppins";
 
 const { width } = Dimensions.get("window");
 const isDesktop = width > 768;
 
 const StockTransactionsScreen = () => {
+  const [fontsLoaded] = useFonts({
+    Poppins_400Regular,
+    Poppins_500Medium,
+    Poppins_600SemiBold,
+    Poppins_700Bold,
+  });
+
   const [transactions, setTransactions] = useState([]);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -100,6 +114,86 @@ const StockTransactionsScreen = () => {
     currentPage * itemsPerPage
   );
 
+  // Render functions
+  const renderTableHeader = () => (
+    <View style={styles.tableHeader}>
+      <Text style={[styles.headerText, { flex: 3 }]}>Product</Text>
+      <Text style={[styles.headerText, { flex: 1, textAlign: "center" }]}>
+        Type
+      </Text>
+      <Text style={[styles.headerText, { flex: 1, textAlign: "center" }]}>
+        Quantity
+      </Text>
+      <Text style={[styles.headerText, { flex: 2, textAlign: "center" }]}>
+        Date
+      </Text>
+    </View>
+  );
+
+  const renderTableRow = (t, i) => (
+    <View
+      key={t._id}
+      style={[styles.tableRow, i % 2 === 0 ? styles.evenRow : styles.oddRow]}
+    >
+      <Text style={[styles.cell, { flex: 3 }]}>
+        {getProductName(t.productId)}
+      </Text>
+      <Text
+        style={[
+          styles.cell,
+          {
+            flex: 1,
+            textAlign: "center",
+            color: t.type === "IN" ? "#2ecc71" : "#e74c3c",
+          },
+        ]}
+      >
+        {t.type}
+      </Text>
+      <Text style={[styles.cell, { flex: 1, textAlign: "center" }]}>
+        {t.totalStock}
+      </Text>
+      <Text style={[styles.cell, { flex: 2, textAlign: "center" }]}>
+        {new Date(t.createdAt).toLocaleDateString()}
+      </Text>
+    </View>
+  );
+
+  const renderMobileTransactionCard = (t) => (
+    <Card key={t._id} style={styles.mobileCard}>
+      <Card.Content>
+        <View style={styles.mobileCardContent}>
+          <Text style={styles.mobileCardTitle}>
+            {getProductName(t.productId)}
+          </Text>
+          <View style={styles.mobileCardInfo}>
+            <Text
+              style={[
+                styles.mobileCardSubtitle,
+                { color: t.type === "IN" ? "#2ecc71" : "#e74c3c" },
+              ]}
+            >
+              {t.type}
+            </Text>
+            <Text style={styles.mobileCardSubtitle}>Qty: {t.totalStock}</Text>
+            <Text style={styles.mobileCardSubtitle}>
+              Date: {new Date(t.createdAt).toLocaleDateString()}
+            </Text>
+          </View>
+        </View>
+      </Card.Content>
+    </Card>
+  );
+
+  if (loading || !fontsLoaded) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" />
+        <Text style={styles.loadingText}>Loading transactions...</Text>
+      </View>
+    );
+  }
+
   return (
     <ScrollView
       style={styles.container}
@@ -108,7 +202,10 @@ const StockTransactionsScreen = () => {
       }
     >
       <Card style={styles.headerCard}>
-        <Card.Title title="Stock Transactions" titleStyle={styles.title} />
+        <View style={styles.headerContent}>
+          <Text style={styles.title}>Stock Transactions</Text>
+          <Text style={styles.subtitle}>History of inventory changes</Text>
+        </View>
       </Card>
       {/* Controls: Search, Filter, Sort */}
       <Card style={styles.controlsCard}>
@@ -121,7 +218,6 @@ const StockTransactionsScreen = () => {
             left={<TextInput.Icon icon="magnify" />}
             style={styles.input}
           />
-
           <View style={styles.row}>
             <MenuFilter
               title="Type"
@@ -138,59 +234,30 @@ const StockTransactionsScreen = () => {
           </View>
         </Card.Content>
       </Card>
-      {/* Table */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <View style={[styles.table, { minWidth: 400 }]}>
-          <View style={[styles.tableHeader, { backgroundColor: "#2c3e50" }]}>
-            <Text style={[styles.headerText, { flex: 3 }]}>Product</Text>
-            <Text style={[styles.headerText, { flex: 1, textAlign: "center" }]}>
-              Type
-            </Text>
-            <Text style={[styles.headerText, { flex: 1, textAlign: "center" }]}>
-              Quantity
-            </Text>
-            <Text style={[styles.headerText, { flex: 2, textAlign: "center" }]}>
-              Date
-            </Text>
+      {/* Transaction List/Table */}
+      <Card style={styles.tableCard}>
+        {isDesktop ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={[styles.table, { minWidth: 400 }]}>
+              {renderTableHeader()}
+              {paginatedTransactions.length > 0 ? (
+                paginatedTransactions.map(renderTableRow)
+              ) : (
+                <Text style={styles.noData}>No transactions found.</Text>
+              )}
+            </View>
+          </ScrollView>
+        ) : (
+          <View style={styles.mobileList}>
+            {paginatedTransactions.length > 0 ? (
+              paginatedTransactions.map(renderMobileTransactionCard)
+            ) : (
+              <Text style={styles.noData}>No transactions found.</Text>
+            )}
           </View>
+        )}
+      </Card>
 
-          {paginatedTransactions.length > 0 ? (
-            paginatedTransactions.map((t, i) => (
-              <View
-                key={t._id}
-                style={[
-                  styles.tableRow,
-                  i % 2 === 0 ? styles.evenRow : styles.oddRow,
-                ]}
-              >
-                <Text style={[styles.cell, { flex: 3 }]}>
-                  {getProductName(t.productId)}
-                </Text>
-                <Text
-                  style={[
-                    styles.cell,
-                    {
-                      flex: 1,
-                      textAlign: "center",
-                      color: t.type === "IN" ? "green" : "red",
-                    },
-                  ]}
-                >
-                  {t.type}
-                </Text>
-                <Text style={[styles.cell, { flex: 1, textAlign: "center" }]}>
-                  {t.totalStock}
-                </Text>
-                <Text style={[styles.cell, { flex: 2, textAlign: "center" }]}>
-                  {new Date(t.createdAt).toLocaleDateString()}
-                </Text>
-              </View>
-            ))
-          ) : (
-            <Text style={styles.noData}>No transactions found.</Text>
-          )}
-        </View>
-      </ScrollView>
       {/* Pagination */}
       {totalPages > 1 && (
         <View style={styles.pagination}>
@@ -250,8 +317,28 @@ const MenuFilter = ({ title, value, options, onSelect }) => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, backgroundColor: "#f0f4f7" },
+  center: { flex: 1, justifyContent: "center", alignItems: "center" },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    fontFamily: "Poppins_400Regular",
+    color: "#7f8c8d",
+  },
   headerCard: { marginBottom: 16, borderRadius: 12, elevation: 4 },
-  title: { fontSize: 20, color: "#007AFF" },
+  headerContent: { padding: 20, alignItems: "center" },
+  title: {
+    fontSize: 24,
+    fontFamily: "Poppins_700Bold",
+    color: "#2c3e50",
+    textAlign: "center",
+  },
+  subtitle: {
+    fontSize: 14,
+    fontFamily: "Poppins_400Regular",
+    color: "#7f8c8d",
+    textAlign: "center",
+    marginTop: 4,
+  },
   controlsCard: {
     marginBottom: 16,
     borderRadius: 12,
@@ -260,12 +347,12 @@ const styles = StyleSheet.create({
   },
   input: { marginBottom: 12, backgroundColor: "#fff" },
   row: { flexDirection: "row", marginBottom: 8 },
+  tableCard: { flex: 1, elevation: 2, marginBottom: 16, borderRadius: 8 },
   table: {
-    minWidth: 400, // reduced width
+    minWidth: 400,
     backgroundColor: "#fff",
     borderRadius: 8,
   },
-
   tableHeader: {
     flexDirection: "row",
     paddingVertical: 12,
@@ -274,12 +361,11 @@ const styles = StyleSheet.create({
     borderBottomColor: "#ddd",
   },
   headerText: {
-    color: "#fff", // white text for dark background
-    fontWeight: "600",
+    color: "#fff",
+    fontFamily: "Poppins_600SemiBold",
     fontSize: 14,
     textAlign: "left",
   },
-
   tableRow: {
     flexDirection: "row",
     paddingVertical: 12,
@@ -287,15 +373,59 @@ const styles = StyleSheet.create({
   },
   evenRow: { backgroundColor: "#f8faff" },
   oddRow: { backgroundColor: "#fff" },
-  cell: { fontSize: 14, fontWeight: "500", color: "#2c3e50" },
-  noData: { textAlign: "center", padding: 20, color: "#7f8c8d" },
+  cell: {
+    fontSize: 14,
+    fontFamily: "Poppins_400Regular",
+    color: "#2c3e50",
+  },
+  noData: {
+    textAlign: "center",
+    padding: 20,
+    color: "#7f8c8d",
+    fontStyle: "italic",
+  },
   pagination: {
     flexDirection: "row",
     justifyContent: "space-between",
     marginTop: 12,
     alignItems: "center",
+    paddingHorizontal: 16,
   },
-  pageInfo: { fontSize: 14, fontWeight: "600", color: "#007AFF" },
+  pageInfo: {
+    fontSize: 14,
+    fontFamily: "Poppins_600SemiBold",
+    color: "#7f8c8d",
+  },
+  // Mobile-specific styles for cards
+  mobileList: {
+    padding: 8,
+  },
+  mobileCard: {
+    marginBottom: 10,
+    elevation: 2,
+    borderRadius: 8,
+  },
+  mobileCardContent: {
+    flexDirection: "column",
+  },
+  mobileCardTitle: {
+    fontSize: 16,
+    fontFamily: "Poppins_600SemiBold",
+    color: "#2c3e50",
+    marginBottom: 4,
+  },
+  mobileCardInfo: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    flexWrap: "wrap",
+  },
+  mobileCardSubtitle: {
+    fontSize: 14,
+    fontFamily: "Poppins_400Regular",
+    color: "#7f8c8d",
+    marginRight: 10,
+  },
 });
 
 export default StockTransactionsScreen;

@@ -12,7 +12,6 @@ import {
 import {
   Button,
   Card,
-  Surface,
   IconButton,
   Chip,
   TextInput,
@@ -28,30 +27,91 @@ import {
   Poppins_700Bold,
 } from "@expo-google-fonts/poppins";
 import DistributeToUmunyabuzimaService from "../../services/distributeToUmunyabuzimaService";
-// Correct Import for UserService (default export)
 import UserService from "../../services/userService";
-// Correct Import for ProductService (named export)
 import { getAllProducts } from "../../services/ProductService.js";
+import { format } from "date-fns"; // Used for formatting dates
 
 const { width } = Dimensions.get("window");
 const isDesktop = width > 768;
 
-const COLUMNS = [
-  { id: "user", label: "User", flex: 2 },
-  { id: "product", label: "Product", flex: 2 },
-  { id: "quantity", label: "Quantity", flex: 1 },
-  { id: "date", label: "Date", flex: 1.5 },
-  { id: "actions", label: "Actions", flex: 1.5 },
-];
+// --- Card component for mobile view ---
+const DistributionCard = ({ item, openEditModal, handleDelete }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  return (
+    <Card style={styles.card}>
+      <TouchableOpacity
+        onPress={() => setIsExpanded(!isExpanded)}
+        activeOpacity={0.8}
+      >
+        <Card.Content>
+          {/* Main Card View */}
+          <View style={styles.cardHeader}>
+            <View style={styles.cardInfo}>
+              <Text style={styles.cardTitle} numberOfLines={1}>
+                {item.productId?.name}
+              </Text>
+              <Text style={styles.cardSubtitle}>
+                Distributed to: {item.userId?.name}
+              </Text>
+            </View>
+            <View style={styles.cardActions}>
+              <IconButton
+                icon={isExpanded ? "chevron-up" : "chevron-down"}
+                size={20}
+                color="#007bff"
+              />
+            </View>
+          </View>
+
+          {/* Expanded Content (Accordion) */}
+          {isExpanded && (
+            <View style={styles.expandedContent}>
+              <View style={styles.expandedRow}>
+                <Text style={styles.expandedLabel}>Quantity:</Text>
+                <Text style={styles.expandedValue}>{item.quantity}</Text>
+              </View>
+              <View style={styles.expandedRow}>
+                <Text style={styles.expandedLabel}>Date:</Text>
+                <Text style={styles.expandedValue}>
+                  {format(new Date(item.createdAt), "MMM dd, yyyy")}
+                </Text>
+              </View>
+              <View style={styles.expandedRow}>
+                <Text style={styles.expandedLabel}>Actions:</Text>
+                <View style={styles.cardActionButtons}>
+                  <IconButton
+                    icon="pencil"
+                    size={20}
+                    color="#3498db"
+                    onPress={() => openEditModal(item)}
+                    style={{ margin: 0 }}
+                  />
+                  <IconButton
+                    icon="delete"
+                    size={20}
+                    color="#e74c3c"
+                    onPress={() => handleDelete(item._id)}
+                    style={{ margin: 0 }}
+                  />
+                </View>
+              </View>
+            </View>
+          )}
+        </Card.Content>
+      </TouchableOpacity>
+    </Card>
+  );
+};
 
 const UserDistributionsScreen = ({ navigation }) => {
+  // ... (All existing state and functions remain the same)
   const [fontsLoaded] = useFonts({
     Poppins_400Regular,
     Poppins_500Medium,
     Poppins_600SemiBold,
     Poppins_700Bold,
   });
-
   const [distributions, setDistributions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
@@ -59,8 +119,6 @@ const UserDistributionsScreen = ({ navigation }) => {
   const [selectedDateFilter, setSelectedDateFilter] = useState("All");
   const itemsPerPage = 10;
   const dateFilters = ["All", "Today", "This Week", "This Month"];
-
-  // Modal & form state
   const [isCreateModalVisible, setCreateModalVisible] = useState(false);
   const [isEditModalVisible, setEditModalVisible] = useState(false);
   const [formValues, setFormValues] = useState({
@@ -71,8 +129,6 @@ const UserDistributionsScreen = ({ navigation }) => {
   const [selectedDistribution, setSelectedDistribution] = useState(null);
   const [users, setUsers] = useState([]);
   const [products, setProducts] = useState([]);
-
-  // State for dropdown menus
   const [isUserMenuVisible, setUserMenuVisible] = useState(false);
   const [isProductMenuVisible, setProductMenuVisible] = useState(false);
 
@@ -104,12 +160,9 @@ const UserDistributionsScreen = ({ navigation }) => {
     try {
       const usersData = await UserService.getUsers();
       const productsData = await getAllProducts();
-
-      // Filter users to include only those with the role "umunyabuzima"
       const filteredUsers = usersData.filter(
         (user) => user.role === "umunyabuzima"
       );
-
       setUsers(filteredUsers || []);
       setProducts(productsData || []);
     } catch (error) {
@@ -194,11 +247,11 @@ const UserDistributionsScreen = ({ navigation }) => {
     ]);
   };
 
-  // Open modals
   const openCreateModal = () => {
     setFormValues({ userId: "", productId: "", quantity: "" });
     setCreateModalVisible(true);
   };
+
   const openEditModal = (dist) => {
     setSelectedDistribution(dist);
     setFormValues({
@@ -209,14 +262,10 @@ const UserDistributionsScreen = ({ navigation }) => {
     setEditModalVisible(true);
   };
 
-  // Submit handlers
-  // Inside your UserDistributionsScreen.js file
-
   const submitCreate = async () => {
     if (!formValues.userId || !formValues.productId || !formValues.quantity) {
       return Alert.alert("Validation Error", "All fields are required");
     }
-
     try {
       await DistributeToUmunyabuzimaService.createDistribution(formValues);
       setCreateModalVisible(false);
@@ -224,7 +273,6 @@ const UserDistributionsScreen = ({ navigation }) => {
       setFormValues({ userId: "", productId: "", quantity: "" });
       Alert.alert("Success", "Distribution created successfully!");
     } catch (error) {
-      // Access the specific backend error message and display it
       const errorMessage =
         error.response?.data?.message ||
         "An unexpected error occurred. Please try again.";
@@ -277,11 +325,11 @@ const UserDistributionsScreen = ({ navigation }) => {
 
   const renderHeader = () => (
     <View style={styles.tableHeader}>
-      {COLUMNS.map((col) => (
-        <Text key={col.id} style={[styles.headerText, { flex: col.flex }]}>
-          {col.label}
-        </Text>
-      ))}
+      <Text style={[styles.headerText, { flex: 2 }]}>User</Text>
+      <Text style={[styles.headerText, { flex: 2 }]}>Product</Text>
+      <Text style={[styles.headerText, { flex: 1 }]}>Quantity</Text>
+      <Text style={[styles.headerText, { flex: 1.5 }]}>Date</Text>
+      <Text style={[styles.headerText, { flex: 1.5 }]}>Actions</Text>
     </View>
   );
 
@@ -332,7 +380,7 @@ const UserDistributionsScreen = ({ navigation }) => {
 
   return (
     <ScrollView showsVerticalScrollIndicator={false} style={styles.container}>
-      {/* Buttons */}
+      {/* ... (Existing buttons and controls) ... */}
       <Card style={styles.buttonsCard}>
         <Card.Content>
           <Button
@@ -346,8 +394,6 @@ const UserDistributionsScreen = ({ navigation }) => {
           </Button>
         </Card.Content>
       </Card>
-
-      {/* Search & Filters */}
       <Card style={styles.controlsCard}>
         <Card.Content>
           <TextInput
@@ -396,8 +442,6 @@ const UserDistributionsScreen = ({ navigation }) => {
           </View>
         </Card.Content>
       </Card>
-
-      {/* Summary */}
       <Card style={styles.summaryCard}>
         <Card.Content>
           <Text style={styles.resultsText}>
@@ -407,19 +451,38 @@ const UserDistributionsScreen = ({ navigation }) => {
         </Card.Content>
       </Card>
 
-      {/* Table */}
-      <View style={styles.tableCard}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <View style={styles.tableWrapper}>
-            {renderHeader()}
-            {paginatedDistributions.length > 0 ? (
-              paginatedDistributions.map(renderRow)
-            ) : (
-              <Text style={styles.empty}>No distributions found</Text>
-            )}
-          </View>
-        </ScrollView>
-      </View>
+      {/* Conditional Rendering of Table or Cards */}
+      {isDesktop ? (
+        // Web/Desktop Table View
+        <View style={styles.tableCard}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={styles.tableWrapper}>
+              {renderHeader()}
+              {paginatedDistributions.length > 0 ? (
+                paginatedDistributions.map(renderRow)
+              ) : (
+                <Text style={styles.empty}>No distributions found</Text>
+              )}
+            </View>
+          </ScrollView>
+        </View>
+      ) : (
+        // Mobile Card View
+        <View style={styles.mobileListContainer}>
+          {paginatedDistributions.length > 0 ? (
+            paginatedDistributions.map((item) => (
+              <DistributionCard
+                key={item._id}
+                item={item}
+                openEditModal={openEditModal}
+                handleDelete={handleDelete}
+              />
+            ))
+          ) : (
+            <Text style={styles.empty}>No distributions found</Text>
+          )}
+        </View>
+      )}
 
       {/* Pagination */}
       {totalPages > 1 && (
@@ -428,7 +491,7 @@ const UserDistributionsScreen = ({ navigation }) => {
         </Card>
       )}
 
-      {/* CREATE MODAL */}
+      {/* Modals (No change needed here, they are already responsive) */}
       <Portal>
         <PaperModal
           visible={isCreateModalVisible}
@@ -436,7 +499,6 @@ const UserDistributionsScreen = ({ navigation }) => {
           contentContainerStyle={styles.modalContainer}
         >
           <Text style={styles.modalTitle}>Create Distribution</Text>
-
           <Menu
             visible={isUserMenuVisible}
             onDismiss={() => setUserMenuVisible(false)}
@@ -464,7 +526,6 @@ const UserDistributionsScreen = ({ navigation }) => {
               />
             ))}
           </Menu>
-
           <Menu
             visible={isProductMenuVisible}
             onDismiss={() => setProductMenuVisible(false)}
@@ -493,7 +554,6 @@ const UserDistributionsScreen = ({ navigation }) => {
               />
             ))}
           </Menu>
-
           <TextInput
             label="Quantity"
             value={formValues.quantity}
@@ -504,7 +564,6 @@ const UserDistributionsScreen = ({ navigation }) => {
             mode="outlined"
             style={{ marginBottom: 16 }}
           />
-
           <Button
             mode="contained"
             onPress={submitCreate}
@@ -518,7 +577,6 @@ const UserDistributionsScreen = ({ navigation }) => {
         </PaperModal>
       </Portal>
 
-      {/* EDIT MODAL */}
       <Portal>
         <PaperModal
           visible={isEditModalVisible}
@@ -526,7 +584,6 @@ const UserDistributionsScreen = ({ navigation }) => {
           contentContainerStyle={styles.modalContainer}
         >
           <Text style={styles.modalTitle}>Edit Distribution</Text>
-
           <Menu
             visible={isUserMenuVisible}
             onDismiss={() => setUserMenuVisible(false)}
@@ -554,7 +611,6 @@ const UserDistributionsScreen = ({ navigation }) => {
               />
             ))}
           </Menu>
-
           <Menu
             visible={isProductMenuVisible}
             onDismiss={() => setProductMenuVisible(false)}
@@ -583,7 +639,6 @@ const UserDistributionsScreen = ({ navigation }) => {
               />
             ))}
           </Menu>
-
           <TextInput
             label="Quantity"
             value={formValues.quantity}
@@ -594,7 +649,6 @@ const UserDistributionsScreen = ({ navigation }) => {
             mode="outlined"
             style={{ marginBottom: 16 }}
           />
-
           <Button
             mode="contained"
             onPress={submitEdit}
@@ -612,6 +666,7 @@ const UserDistributionsScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
+  // ... (All existing styles remain, with additions below)
   container: {
     flex: 1,
     padding: 16,
@@ -781,6 +836,67 @@ const styles = StyleSheet.create({
     color: "#7f8c8d",
     padding: 40,
     fontStyle: "italic",
+  },
+  // --- NEW MOBILE STYLES ---
+  mobileListContainer: {
+    flex: 1,
+    marginBottom: 16,
+  },
+  card: {
+    marginBottom: 10,
+    elevation: 2,
+    borderRadius: 8,
+    backgroundColor: "#fff",
+  },
+  cardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingBottom: 5,
+  },
+  cardInfo: {
+    flex: 1,
+    marginRight: 10,
+  },
+  cardTitle: {
+    fontSize: 16,
+    fontFamily: "Poppins_600SemiBold",
+    color: "#2c3e50",
+  },
+  cardSubtitle: {
+    fontSize: 13,
+    fontFamily: "Poppins_400Regular",
+    color: "#7f8c8d",
+  },
+  cardActions: {
+    justifyContent: "center",
+  },
+  expandedContent: {
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#e0e4e8",
+  },
+  expandedRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  expandedLabel: {
+    fontSize: 13,
+    fontFamily: "Poppins_500Medium",
+    color: "#34495e",
+  },
+  expandedValue: {
+    fontSize: 13,
+    fontFamily: "Poppins_400Regular",
+    color: "#2c3e50",
+    textAlign: "right",
+  },
+  cardActionButtons: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
   },
 });
 

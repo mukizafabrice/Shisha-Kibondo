@@ -26,6 +26,8 @@ import {
 } from "@expo-google-fonts/poppins";
 import BeneficiaryService from "../../services/beneficiaryService";
 
+const BLUE = "#007AFF";
+
 const AddBeneficiaryScreen = ({ navigation, route }) => {
   const [fontsLoaded] = useFonts({
     Poppins_400Regular,
@@ -33,6 +35,7 @@ const AddBeneficiaryScreen = ({ navigation, route }) => {
     Poppins_600SemiBold,
     Poppins_700Bold,
   });
+
   const [menuVisible, setMenuVisible] = useState(false);
   const [formData, setFormData] = useState({
     userId: "",
@@ -41,6 +44,8 @@ const AddBeneficiaryScreen = ({ navigation, route }) => {
     lastName: "",
     village: "",
     type: "",
+    totalProgramDays: 180, // default 6 months
+    extendReduceDays: 0, // new field for extend/reduce
   });
 
   const [errors, setErrors] = useState({});
@@ -49,20 +54,19 @@ const AddBeneficiaryScreen = ({ navigation, route }) => {
   const [loadingUsers, setLoadingUsers] = useState(true);
 
   const beneficiaryTypes = ["pregnant", "breastfeeding", "child"];
-
   const { userId, beneficiary } = route.params || {};
   const isEditMode = !!beneficiary;
 
+  // Load health workers
   useEffect(() => {
     fetchUsers();
   }, []);
 
   useEffect(() => {
-    if (userId) {
-      setFormData((prev) => ({ ...prev, userId }));
-    }
+    if (userId) setFormData((prev) => ({ ...prev, userId }));
   }, [userId]);
 
+  // Pre-fill form in edit mode
   useEffect(() => {
     if (isEditMode && beneficiary) {
       setFormData({
@@ -72,6 +76,8 @@ const AddBeneficiaryScreen = ({ navigation, route }) => {
         lastName: beneficiary.lastName || "",
         village: beneficiary.village || "",
         type: beneficiary.type || "",
+        totalProgramDays: beneficiary.totalProgramDays || 180,
+        extendReduceDays: 0,
       });
     }
   }, [isEditMode, beneficiary]);
@@ -80,8 +86,7 @@ const AddBeneficiaryScreen = ({ navigation, route }) => {
     try {
       const UserService = require("../../services/userService").default;
       const data = await UserService.getUsers();
-      // Filter to only show health workers (umunyabuzima)
-      const healthWorkers = data.filter((user) => user.role === "umunyabuzima");
+      const healthWorkers = data.filter((u) => u.role === "umunyabuzima");
       setUsers(healthWorkers);
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -93,44 +98,21 @@ const AddBeneficiaryScreen = ({ navigation, route }) => {
 
   const validateForm = () => {
     const newErrors = {};
-
-    if (!formData.userId) {
-      newErrors.userId = "Please assign a health worker";
-    }
-
-    if (!formData.nationalId.trim()) {
+    if (!formData.userId) newErrors.userId = "Please assign a health worker";
+    if (!formData.nationalId.trim())
       newErrors.nationalId = "National ID is required";
-    } else if (formData.nationalId.length < 10) {
-      newErrors.nationalId = "National ID must be at least 10 characters";
-    }
-
-    if (!formData.firstName.trim()) {
+    if (!formData.firstName.trim())
       newErrors.firstName = "First name is required";
-    }
-
-    if (!formData.lastName.trim()) {
-      newErrors.lastName = "Last name is required";
-    }
-
-    if (!formData.village.trim()) {
-      newErrors.village = "Village is required";
-    }
-
-    if (!formData.type) {
-      newErrors.type = "Beneficiary type is required";
-    }
-
+    if (!formData.lastName.trim()) newErrors.lastName = "Last name is required";
+    if (!formData.village.trim()) newErrors.village = "Village is required";
+    if (!formData.type) newErrors.type = "Beneficiary type is required";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
-
-    // Clear error when user starts typing
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: null }));
-    }
+    if (errors[field]) setErrors((prev) => ({ ...prev, [field]: null }));
   };
 
   const handleSubmit = async () => {
@@ -141,43 +123,36 @@ const AddBeneficiaryScreen = ({ navigation, route }) => {
 
     setLoading(true);
     try {
+      let updatedProgramDays = Number(formData.totalProgramDays) || 180;
+
+      // Apply extend/reduce only in edit mode
+      if (isEditMode && Number(formData.extendReduceDays) !== 0) {
+        updatedProgramDays += Number(formData.extendReduceDays);
+        if (updatedProgramDays < 1) updatedProgramDays = 1; // minimum 1 day
+      }
+
       const beneficiaryData = {
         ...formData,
+        totalProgramDays: updatedProgramDays,
       };
 
-      let response;
       if (isEditMode) {
-        response = await BeneficiaryService.updateBeneficiary(
+        await BeneficiaryService.updateBeneficiary(
           beneficiary._id,
           beneficiaryData
         );
         Alert.alert("Success", "Beneficiary updated successfully!", [
-          {
-            text: "OK",
-            onPress: () => navigation.goBack(),
-          },
+          { text: "OK", onPress: () => navigation.goBack() },
         ]);
       } else {
-        response = await BeneficiaryService.createBeneficiary(beneficiaryData);
+        await BeneficiaryService.createBeneficiary(beneficiaryData);
         Alert.alert("Success", "Beneficiary added successfully!", [
-          {
-            text: "OK",
-            onPress: () => navigation.goBack(),
-          },
+          { text: "OK", onPress: () => navigation.goBack() },
         ]);
       }
     } catch (error) {
-      console.error(
-        `Error ${isEditMode ? "updating" : "adding"} beneficiary:`,
-        error
-      );
-      Alert.alert(
-        "Error",
-        error.message ||
-          `Failed to ${
-            isEditMode ? "update" : "add"
-          } beneficiary. Please try again.`
-      );
+      console.error(error);
+      Alert.alert("Error", error.message || "Operation failed. Try again.");
     } finally {
       setLoading(false);
     }
@@ -198,13 +173,12 @@ const AddBeneficiaryScreen = ({ navigation, route }) => {
     );
   };
 
-  if (!fontsLoaded) {
+  if (!fontsLoaded)
     return (
       <View style={styles.center}>
         <Text>Loading...</Text>
       </View>
     );
-  }
 
   return (
     <KeyboardAvoidingView
@@ -212,214 +186,181 @@ const AddBeneficiaryScreen = ({ navigation, route }) => {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <ScrollView showsVerticalScrollIndicator={false} style={styles.surface}>
-        <ScrollView
-          style={styles.scrollView}
-          showsVerticalScrollIndicator={false}
-        >
-          <Card style={styles.formCard}>
-            <Card.Content>
-              <Text style={styles.title}>
-                {isEditMode ? "Edit Beneficiary" : "Add New Beneficiary"}
-              </Text>
+        <Card style={styles.formCard}>
+          <Card.Content>
+            <Text style={styles.title}>
+              {isEditMode ? "Edit Beneficiary" : "Add New Beneficiary"}
+            </Text>
 
-              {/* Assignment Section */}
-              <Text style={styles.sectionTitle}>Assignment</Text>
-
-              <View style={styles.userContainer}>
-                <Text style={styles.userLabel}>Assign Health Worker *</Text>
-                {loadingUsers ? (
-                  <Text style={styles.loadingText}>
-                    Loading health workers...
-                  </Text>
-                ) : (
-                  <Menu
-                    visible={menuVisible}
-                    onDismiss={() => setMenuVisible(false)}
-                    anchor={
-                      <TextInput
-                        mode="outlined"
-                        label="Select Health Worker"
-                        value={
-                          users.find((u) => u._id === formData.userId)?.name ||
-                          ""
-                        }
-                        onFocus={() => setMenuVisible(true)}
-                        right={<TextInput.Icon icon="menu-down" />}
-                      />
-                    }
-                  >
-                    {users.map((user) => (
-                      <Menu.Item
-                        key={user._id}
-                        title={user.name}
-                        onPress={() => {
-                          handleInputChange("userId", user._id);
-                          setMenuVisible(false);
-                        }}
-                      />
-                    ))}
-                  </Menu>
-                )}
-                <HelperText type="error" visible={!!errors.userId}>
-                  {errors.userId}
-                </HelperText>
-              </View>
-
-              {/* Personal Information Section */}
-              <Text style={styles.sectionTitle}>Personal Information</Text>
-
-              <TextInput
-                label="National ID *"
-                value={formData.nationalId}
-                onChangeText={(value) => handleInputChange("nationalId", value)}
-                mode="outlined"
-                style={styles.input}
-                error={!!errors.nationalId}
-                placeholder="Enter national ID"
-              />
-              <HelperText type="error" visible={!!errors.nationalId}>
-                {errors.nationalId}
-              </HelperText>
-
-              <View style={styles.nameRow}>
-                <View style={styles.nameInput}>
-                  <TextInput
-                    label="First Name *"
-                    value={formData.firstName}
-                    onChangeText={(value) =>
-                      handleInputChange("firstName", value)
-                    }
-                    mode="outlined"
-                    style={styles.input}
-                    error={!!errors.firstName}
-                    placeholder="Enter first name"
-                  />
-                  <HelperText type="error" visible={!!errors.firstName}>
-                    {errors.firstName}
-                  </HelperText>
-                </View>
-
-                <View style={styles.nameInput}>
-                  <TextInput
-                    label="Last Name *"
-                    value={formData.lastName}
-                    onChangeText={(value) =>
-                      handleInputChange("lastName", value)
-                    }
-                    mode="outlined"
-                    style={styles.input}
-                    error={!!errors.lastName}
-                    placeholder="Enter last name"
-                  />
-                  <HelperText type="error" visible={!!errors.lastName}>
-                    {errors.lastName}
-                  </HelperText>
-                </View>
-              </View>
-
-              <TextInput
-                label="Village *"
-                value={formData.village}
-                onChangeText={(value) => handleInputChange("village", value)}
-                mode="outlined"
-                style={styles.input}
-                error={!!errors.village}
-                placeholder="Enter village name"
-              />
-              <HelperText type="error" visible={!!errors.village}>
-                {errors.village}
-              </HelperText>
-
-              {/* Program Information Section */}
-              <Text style={styles.sectionTitle}>Program Information</Text>
-
-              <View style={styles.typeContainer}>
-                <Text style={styles.typeLabel}>Beneficiary Type *</Text>
-                <View style={styles.typeChips}>
-                  {beneficiaryTypes.map((type) => (
-                    <Chip
-                      key={type}
-                      mode={formData.type === type ? "flat" : "outlined"}
-                      selected={formData.type === type}
-                      onPress={() => handleInputChange("type", type)}
-                      style={[
-                        styles.typeChip,
-                        formData.type === type && styles.selectedTypeChip,
-                      ]}
-                    >
-                      {type.charAt(0).toUpperCase() + type.slice(1)}
-                    </Chip>
+            {/* Assignment */}
+            <Text style={styles.sectionTitle}>Assignment</Text>
+            <View style={styles.userContainer}>
+              <Text style={styles.userLabel}>Assign Health Worker *</Text>
+              {loadingUsers ? (
+                <Text style={styles.loadingText}>
+                  Loading health workers...
+                </Text>
+              ) : (
+                <Menu
+                  visible={menuVisible}
+                  onDismiss={() => setMenuVisible(false)}
+                  anchor={
+                    <TextInput
+                      mode="outlined"
+                      label="Select Health Worker"
+                      value={
+                        users.find((u) => u._id === formData.userId)?.name || ""
+                      }
+                      onFocus={() => setMenuVisible(true)}
+                      right={<TextInput.Icon icon="menu-down" />}
+                    />
+                  }
+                >
+                  {users.map((user) => (
+                    <Menu.Item
+                      key={user._id}
+                      title={user.name}
+                      onPress={() => {
+                        handleInputChange("userId", user._id);
+                        setMenuVisible(false);
+                      }}
+                    />
                   ))}
-                </View>
-                <HelperText type="error" visible={!!errors.type}>
-                  {errors.type}
+                </Menu>
+              )}
+              <HelperText type="error" visible={!!errors.userId}>
+                {errors.userId}
+              </HelperText>
+            </View>
+
+            {/* Personal Info */}
+            <Text style={styles.sectionTitle}>Personal Information</Text>
+            <TextInput
+              label="National ID *"
+              value={formData.nationalId}
+              onChangeText={(v) => handleInputChange("nationalId", v)}
+              mode="outlined"
+              style={styles.input}
+              error={!!errors.nationalId}
+            />
+            <HelperText type="error" visible={!!errors.nationalId}>
+              {errors.nationalId}
+            </HelperText>
+
+            <View style={styles.nameRow}>
+              <View style={styles.nameInput}>
+                <TextInput
+                  label="First Name *"
+                  value={formData.firstName}
+                  onChangeText={(v) => handleInputChange("firstName", v)}
+                  mode="outlined"
+                  style={styles.input}
+                  error={!!errors.firstName}
+                />
+                <HelperText type="error" visible={!!errors.firstName}>
+                  {errors.firstName}
                 </HelperText>
               </View>
-
-              {/* Helper Information */}
-              <Card style={styles.helperCard}>
-                <Card.Content>
-                  <Text style={styles.helperTitle}>Information</Text>
-                  <Text style={styles.helperText}>
-                    • The beneficiary status will be set to "active" upon
-                    creation.
-                  </Text>
-                  <Text style={styles.helperText}>
-                    • Program days can be added after creating the beneficiary.
-                  </Text>
-                </Card.Content>
-              </Card>
-
-              {/* Action Buttons */}
-              <View style={styles.buttonContainer}>
-                <Button
+              <View style={styles.nameInput}>
+                <TextInput
+                  label="Last Name *"
+                  value={formData.lastName}
+                  onChangeText={(v) => handleInputChange("lastName", v)}
                   mode="outlined"
-                  onPress={handleCancel}
-                  style={styles.cancelButton}
-                  disabled={loading}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  mode="contained"
-                  onPress={handleSubmit}
-                  style={styles.submitButton}
-                  loading={loading}
-                  disabled={loading}
-                >
-                  {isEditMode ? "Update Beneficiary" : "Add Beneficiary"}
-                </Button>
+                  style={styles.input}
+                  error={!!errors.lastName}
+                />
+                <HelperText type="error" visible={!!errors.lastName}>
+                  {errors.lastName}
+                </HelperText>
               </View>
-            </Card.Content>
-          </Card>
-        </ScrollView>
+            </View>
+
+            <TextInput
+              label="Village *"
+              value={formData.village}
+              onChangeText={(v) => handleInputChange("village", v)}
+              mode="outlined"
+              style={styles.input}
+              error={!!errors.village}
+            />
+            <HelperText type="error" visible={!!errors.village}>
+              {errors.village}
+            </HelperText>
+
+            {/* Program Info */}
+            <Text style={styles.sectionTitle}>Program Information</Text>
+            <View style={styles.typeContainer}>
+              <Text style={styles.typeLabel}>Beneficiary Type *</Text>
+              <View style={styles.typeChips}>
+                {beneficiaryTypes.map((type) => (
+                  <Chip
+                    key={type}
+                    selected={formData.type === type}
+                    onPress={() => handleInputChange("type", type)}
+                    style={[
+                      styles.typeChip,
+                      formData.type === type && styles.selectedTypeChip,
+                    ]}
+                  >
+                    {type.charAt(0).toUpperCase() + type.slice(1)}
+                  </Chip>
+                ))}
+              </View>
+              <HelperText type="error" visible={!!errors.type}>
+                {errors.type}
+              </HelperText>
+            </View>
+
+            {isEditMode && (
+              <View style={{ marginBottom: 16 }}>
+                <TextInput
+                  label="Extend / Reduce Program Days"
+                  value={String(formData.extendReduceDays)}
+                  onChangeText={(v) =>
+                    handleInputChange("extendReduceDays", Number(v) || 0)
+                  }
+                  mode="outlined"
+                  keyboardType="numeric"
+                  placeholder="Use negative number to reduce days"
+                  style={styles.input}
+                />
+              </View>
+            )}
+
+            {/* Actions */}
+            <View style={styles.buttonContainer}>
+              <Button
+                mode="outlined"
+                onPress={handleCancel}
+                style={styles.cancelButton}
+                disabled={loading}
+              >
+                Cancel
+              </Button>
+              <Button
+                mode="contained"
+                onPress={handleSubmit}
+                style={styles.submitButton}
+                loading={loading}
+                disabled={loading}
+              >
+                {isEditMode ? "Update Beneficiary" : "Add Beneficiary"}
+              </Button>
+            </View>
+          </Card.Content>
+        </Card>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  surface: {
-    flex: 1,
-    backgroundColor: "#e6f3ff",
-  },
-  center: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  scrollView: {
-    flex: 1,
-    padding: 16,
-  },
-  formCard: {
-    elevation: 2,
-    marginBottom: 20,
-    backgroundColor: "#ffffff",
-  },
+  container: { flex: 1 },
+  surface: { flex: 1, backgroundColor: "#e6f3ff" },
+  center: { flex: 1, justifyContent: "center", alignItems: "center" },
+  scrollView: { flex: 1, padding: 16 },
+  formCard: { elevation: 2, marginBottom: 20, backgroundColor: "#ffffff" },
   title: {
     fontSize: 24,
     fontFamily: "Poppins_700Bold",
@@ -437,98 +378,38 @@ const styles = StyleSheet.create({
     borderBottomColor: "#ecf0f1",
     paddingBottom: 8,
   },
-  input: {
-    marginBottom: 4,
-    backgroundColor: "#fff",
-  },
-  nameRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  nameInput: {
-    flex: 1,
-    marginHorizontal: 4,
-  },
-  typeContainer: {
-    marginBottom: 16,
-  },
+  input: { marginBottom: 4, backgroundColor: "#fff" },
+  nameRow: { flexDirection: "row", justifyContent: "space-between" },
+  nameInput: { flex: 1, marginHorizontal: 4 },
+  typeContainer: { marginBottom: 16 },
   typeLabel: {
     fontSize: 14,
     fontFamily: "Poppins_500Medium",
     color: "#34495e",
     marginBottom: 8,
   },
-  typeChips: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-  },
-  typeChip: {
-    marginRight: 8,
-    marginBottom: 8,
-    backgroundColor: "#ecf0f1",
-  },
-  selectedTypeChip: {
-    backgroundColor: "#007AFF",
-  },
-  userChip: {
-    marginRight: 8,
-    marginBottom: 8,
-    backgroundColor: "#ecf0f1",
-  },
-  selectedUserChip: {
-    backgroundColor: "#007AFF",
-  },
-  userContainer: {
-    marginBottom: 16,
-  },
+  typeChips: { flexDirection: "row", flexWrap: "wrap" },
+  typeChip: { marginRight: 8, marginBottom: 8, backgroundColor: "#ecf0f1" },
+  selectedTypeChip: { backgroundColor: BLUE },
+  userContainer: { marginBottom: 16 },
   userLabel: {
     fontSize: 14,
     fontFamily: "Poppins_500Medium",
     color: "#34495e",
     marginBottom: 8,
   },
-  userChips: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-  },
-  loadingText: {
-    fontSize: 14,
-    fontFamily: "Poppins_400Regular",
-    color: "#7f8c8d",
-    fontStyle: "italic",
-  },
-  helperCard: {
-    backgroundColor: "#e8f4fd",
-    marginTop: 16,
-    marginBottom: 24,
-  },
-  helperTitle: {
-    fontSize: 16,
-    fontFamily: "Poppins_600SemiBold",
-    color: "#2980b9",
-    marginBottom: 8,
-  },
-  helperText: {
-    fontSize: 12,
-    fontFamily: "Poppins_400Regular",
-    color: "#34495e",
-    marginBottom: 4,
-    lineHeight: 16,
-  },
   buttonContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
     marginTop: 16,
   },
-  cancelButton: {
-    flex: 1,
-    marginRight: 8,
-    borderColor: "#e74c3c",
-  },
-  submitButton: {
-    flex: 1,
-    marginLeft: 8,
-    backgroundColor: "#007AFF",
+  cancelButton: { flex: 1, marginRight: 8, borderColor: "#e74c3c" },
+  submitButton: { flex: 1, marginLeft: 8, backgroundColor: BLUE },
+  loadingText: {
+    fontSize: 14,
+    fontFamily: "Poppins_400Regular",
+    color: "#7f8c8d",
+    fontStyle: "italic",
   },
 });
 

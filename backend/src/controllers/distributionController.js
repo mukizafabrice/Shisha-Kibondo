@@ -1,5 +1,6 @@
 import Distribution from "../models/Distribution.js";
 import Stock from "../models/Stock.js";
+import Beneficiaries from "../models/Beneficiaries.js"; // import model
 
 export const createDistribution = async (req, res) => {
   try {
@@ -11,7 +12,7 @@ export const createDistribution = async (req, res) => {
         .json({ message: "All required fields must be provided." });
     }
 
-    // 1. Check if there is enough stock
+    // 1. Check stock availability
     const stock = await Stock.findOne({ productId });
     if (!stock) {
       return res
@@ -23,7 +24,7 @@ export const createDistribution = async (req, res) => {
       return res.status(400).json({ message: "Not enough stock available." });
     }
 
-    // 2. Subtract the quantity from stock
+    // 2. Subtract stock
     stock.totalStock -= quantityKg;
     await stock.save();
 
@@ -35,7 +36,22 @@ export const createDistribution = async (req, res) => {
       userId,
     });
 
-    res.status(201).json(distribution);
+    // 4. Update beneficiary program progress
+    const beneficiary = await Beneficiaries.findById(beneficiaryId);
+    if (beneficiary) {
+      beneficiary.totalProgramDays += 1; // or keep static if pre-set
+      beneficiary.completedDays += 1;
+      beneficiary.attendanceRate = Math.round(
+        (beneficiary.completedDays / beneficiary.totalProgramDays) * 100
+      );
+      await beneficiary.save();
+    }
+
+    res.status(201).json({
+      message: "Distribution successful, beneficiary progress updated.",
+      distribution,
+      beneficiary,
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

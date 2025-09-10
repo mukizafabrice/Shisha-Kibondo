@@ -4,19 +4,19 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  Alert,
   Dimensions,
   RefreshControl,
+  Alert,
 } from "react-native";
 import {
   Card,
   Button,
-  Surface,
   TextInput,
   Portal,
   Modal,
   ActivityIndicator,
   IconButton,
+  Snackbar,
 } from "react-native-paper";
 import DropDownPicker from "react-native-dropdown-picker";
 import {
@@ -73,7 +73,23 @@ const StockManagementScreen = () => {
   const [productOpen, setProductOpen] = useState(false);
   const [productItems, setProductItems] = useState([]);
 
+  // Snackbar state
+  const [snackbarVisible, setSnackbarVisible] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [snackbarType, setSnackbarType] = useState("info");
+
   const navigation = useNavigation();
+
+  // Helper function to show snackbar
+  const showSnackbar = (message, type = "info") => {
+    setSnackbarMessage(message);
+    setSnackbarType(type);
+    setSnackbarVisible(true);
+  };
+
+  const onDismissSnackbar = () => {
+    setSnackbarVisible(false);
+  };
 
   useEffect(() => {
     fetchAll();
@@ -84,6 +100,7 @@ const StockManagementScreen = () => {
       setLoading(true);
       const stockResponse = await getAllMainStock();
       const allProducts = await getAllProducts();
+      console.log("Products fetched:", getAllMainStock);
       setMainStock(stockResponse);
       setProducts(allProducts);
 
@@ -93,7 +110,7 @@ const StockManagementScreen = () => {
       );
     } catch (error) {
       console.error(error);
-      Alert.alert("Error", "Failed to load data.");
+      showSnackbar("Failed to load data.", "error");
     } finally {
       setLoading(false);
     }
@@ -113,7 +130,7 @@ const StockManagementScreen = () => {
   // --- Add Stock ---
   const handleAddStock = async () => {
     if (!stockForm.productId || !stockForm.totalStock) {
-      Alert.alert("Validation Error", "Product and total stock are required.");
+      showSnackbar("Product and total stock are required.", "error");
       return;
     }
     try {
@@ -122,21 +139,21 @@ const StockManagementScreen = () => {
         totalStock: parseFloat(stockForm.totalStock),
       };
       await createMainStock(stockData);
-      Alert.alert("Success", "Stock added!");
+      showSnackbar("Stock added!", "success");
       setAddStockModalVisible(false);
       resetStockForm();
       fetchAll();
     } catch (error) {
       console.error(error);
       const msg = error.response?.data?.message || "Failed to add stock.";
-      Alert.alert("Error", msg);
+      showSnackbar(msg, "error");
     }
   };
 
   // --- Edit Stock ---
   const openEditModal = (item) => {
     setStockForm({
-      productId: item.productId,
+      productId: item.productId._id, // Use the product ID
       totalStock: String(item.totalStock),
     });
     setEditingStockId(item._id);
@@ -145,7 +162,7 @@ const StockManagementScreen = () => {
 
   const handleUpdateStock = async () => {
     if (!stockForm.productId || !stockForm.totalStock) {
-      Alert.alert("Validation Error", "Product and total stock are required.");
+      showSnackbar("Product and total stock are required.", "error");
       return;
     }
     try {
@@ -154,19 +171,19 @@ const StockManagementScreen = () => {
         totalStock: parseFloat(stockForm.totalStock),
       };
       await updateMainStock(editingStockId, stockData);
-      Alert.alert("Success", "Stock updated!");
+      showSnackbar("Stock updated!", "success");
       setEditStockModalVisible(false);
       resetStockForm();
       fetchAll();
     } catch (error) {
       console.error(error);
       const msg = error.response?.data?.message || "Failed to update stock.";
-      Alert.alert("Error", msg);
+      showSnackbar(msg, "error");
     }
   };
 
   // --- Delete Stock ---
-  const handleDeleteStock = async (id) => {
+  const handleDeleteStock = (id) => {
     Alert.alert(
       "Confirm Delete",
       "Are you sure you want to delete this stock?",
@@ -178,11 +195,11 @@ const StockManagementScreen = () => {
           onPress: async () => {
             try {
               await deleteMainStock(id);
-              Alert.alert("Deleted", "Stock has been deleted.");
+              showSnackbar("Stock has been deleted.", "success");
               fetchAll();
             } catch (error) {
               console.error(error);
-              Alert.alert("Error", error.message || "Failed to delete stock.");
+              showSnackbar(error.message || "Failed to delete stock.", "error");
             }
           },
         },
@@ -206,6 +223,7 @@ const StockManagementScreen = () => {
 
   const totalPages = Math.ceil(filteredStock.length / itemsPerPage);
 
+  // --- Render Functions ---
   const renderTableHeader = () => (
     <View style={styles.tableHeader}>
       {COLUMNS.map((col) => (
@@ -216,39 +234,69 @@ const StockManagementScreen = () => {
     </View>
   );
 
-  const renderTableRow = (item, index) => {
+  // const renderTableRow = (item, index) => {
+  //   const product = products.find((p) => p._id === item.productId);
+  //   return (
+  //     <View
+  //       key={item._id}
+  //       style={[
+  //         styles.tableRow,
+  //         index % 2 === 0 ? styles.evenRow : styles.oddRow,
+  //       ]}
+  //     >
+  //       <View style={[styles.cell, { flex: 3 }]}>
+  //         <Text style={styles.cellText}>{product.name}</Text>
+  //       </View>
+  //       <Text style={[styles.cellText, { flex: 2, textAlign: "center" }]}>
+  //         {item.totalStock}
+  //       </Text>
+  //       <View style={[styles.cell, { flex: 2, justifyContent: "center" }]}>
+  //         <IconButton
+  //           icon="pencil"
+  //           size={20}
+  //           iconColor="#007AFF"
+  //           onPress={() => openEditModal(item)}
+  //         />
+  //         <IconButton
+  //           icon="delete"
+  //           size={20}
+  //           iconColor="#E63946"
+  //           onPress={() => handleDeleteStock(item._id)}
+  //         />
+  //       </View>
+  //     </View>
+  //   );
+  // };
+
+  const renderMobileStockCard = (item) => {
     const product = products.find((p) => p._id === item.productId);
     return (
-      <View
-        key={item._id}
-        style={[
-          styles.tableRow,
-          index % 2 === 0 ? styles.evenRow : styles.oddRow,
-        ]}
-      >
-        <View style={[styles.cell, { flex: 3 }]}>
-          <Text style={styles.cellText}>
-            {item.productId?.name || "Unknown Product"}
-          </Text>
-        </View>
-        <Text style={[styles.cellText, { flex: 2, textAlign: "center" }]}>
-          {item.totalStock}
-        </Text>
-        <View style={[styles.cell, { flex: 2, justifyContent: "center" }]}>
-          <IconButton
-            icon="pencil"
-            size={20}
-            iconColor="#007AFF"
-            onPress={() => openEditModal(item)}
-          />
-          <IconButton
-            icon="delete"
-            size={20}
-            iconColor="#E63946"
-            onPress={() => handleDeleteStock(item._id)}
-          />
-        </View>
-      </View>
+      <Card key={item._id} style={styles.mobileCard}>
+        <Card.Content>
+          <View style={styles.mobileCardContent}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.mobileCardTitle}>{item.productId?.name}</Text>
+              <Text style={styles.mobileCardSubtitle}>
+                Stock: {item.totalStock}
+              </Text>
+            </View>
+            <View style={styles.mobileCardActions}>
+              <IconButton
+                icon="pencil"
+                size={24}
+                iconColor="#007AFF"
+                onPress={() => openEditModal(item)}
+              />
+              <IconButton
+                icon="delete"
+                size={24}
+                iconColor="#E63946"
+                onPress={() => handleDeleteStock(item._id)}
+              />
+            </View>
+          </View>
+        </Card.Content>
+      </Card>
     );
   };
 
@@ -262,209 +310,262 @@ const StockManagementScreen = () => {
   }
 
   return (
-    <ScrollView showsVerticalScrollIndicator={false} style={styles.container}>
-      {/* Header */}
-      <Card style={styles.headerCard}>
-        <View style={styles.headerContent}>
-          <Text style={styles.title}>Main Stock</Text>
-          <Text style={styles.subtitle}>Inventory Management</Text>
-        </View>
-      </Card>
-
-      {/* Controls */}
-      <Card style={styles.controlsCard}>
-        <Card.Content>
-          <View style={styles.controlsHeader}>
-            <Button
-              mode="contained"
-              onPress={() => setAddStockModalVisible(true)}
-              style={styles.addButton}
-              icon="plus"
-            >
-              Add Stock
-            </Button>
-            <Button
-              mode="contained"
-              onPress={() => navigation.navigate("StockTransactions")}
-              style={styles.transactionButton}
-              icon="eye"
-            >
-              Transactions
-            </Button>
+    <View style={{ flex: 1 }}>
+      <ScrollView showsVerticalScrollIndicator={false} style={styles.container}>
+        {/* Header */}
+        {/* <Card style={styles.headerCard}>
+          <View style={styles.headerContent}>
+            <Text style={styles.title}>Main Stock</Text>
+            <Text style={styles.subtitle}>Inventory Management</Text>
           </View>
-          <TextInput
-            label="Search by product..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            mode="outlined"
-            left={<TextInput.Icon icon="magnify" />}
-            style={styles.searchInput}
-          />
-        </Card.Content>
-      </Card>
+        </Card> */}
 
-      {/* Stock Table */}
-      <Card style={styles.tableCard}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <View style={styles.tableWrapper}>
-            {renderTableHeader()}
+        {/* Controls */}
+        <Card style={styles.controlsCard}>
+          <Card.Content>
+            <View style={styles.controlsHeader}>
+              <Button
+                mode="contained"
+                onPress={() => setAddStockModalVisible(true)}
+                style={styles.addButton}
+                icon="plus"
+              >
+                Add Stock
+              </Button>
+              <Button
+                mode="contained"
+                onPress={() => navigation.navigate("StockTransactions")}
+                style={styles.transactionButton}
+                icon="eye"
+              >
+                Transactions
+              </Button>
+            </View>
+            <TextInput
+              label="Search by product..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              mode="outlined"
+              left={<TextInput.Icon icon="magnify" />}
+              style={styles.searchInput}
+            />
+          </Card.Content>
+        </Card>
+
+        {/* Stock List/Table */}
+        <Card style={styles.tableCard}>
+          {isDesktop ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View style={styles.tableWrapper}>
+                {renderTableHeader()}
+                <ScrollView
+                  style={{ maxHeight: 600 }}
+                  refreshControl={
+                    <RefreshControl
+                      refreshing={refreshing}
+                      onRefresh={onRefresh}
+                    />
+                  }
+                >
+                  {paginatedStock.length > 0 ? (
+                    paginatedStock.map(renderTableRow)
+                  ) : (
+                    <Text style={styles.emptyText}>No stock items found.</Text>
+                  )}
+                </ScrollView>
+              </View>
+            </ScrollView>
+          ) : (
             <ScrollView
-              style={{ maxHeight: isDesktop ? 600 : 400 }}
+              style={{ maxHeight: 600 }}
               refreshControl={
                 <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
               }
             >
-              {paginatedStock.length > 0 ? (
-                paginatedStock.map(renderTableRow)
-              ) : (
-                <Text style={styles.emptyText}>No stock items found.</Text>
-              )}
+              <View style={styles.mobileList}>
+                {paginatedStock.length > 0 ? (
+                  paginatedStock.map(renderMobileStockCard)
+                ) : (
+                  <Text style={styles.emptyText}>No stock items found.</Text>
+                )}
+              </View>
             </ScrollView>
-          </View>
-        </ScrollView>
-      </Card>
+          )}
+        </Card>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <Card style={styles.paginationCard}>
-          <Card.Content>
-            <View style={styles.paginationContainer}>
-              <Button
-                mode="outlined"
-                onPress={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                disabled={currentPage === 1}
-              >
-                Previous
-              </Button>
-              <Text style={styles.pageInfo}>
-                Page {currentPage} of {totalPages}
-              </Text>
-              <Button
-                mode="outlined"
-                onPress={() =>
-                  setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <Card style={styles.paginationCard}>
+            <Card.Content>
+              <View style={styles.paginationContainer}>
+                <Button
+                  mode="outlined"
+                  onPress={() =>
+                    setCurrentPage((prev) => Math.max(1, prev - 1))
+                  }
+                  disabled={currentPage === 1}
+                >
+                  Previous
+                </Button>
+                <Text style={styles.pageInfo}>
+                  Page {currentPage} of {totalPages}
+                </Text>
+                <Button
+                  mode="outlined"
+                  onPress={() =>
+                    setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+                  }
+                  disabled={currentPage === totalPages}
+                >
+                  Next
+                </Button>
+              </View>
+            </Card.Content>
+          </Card>
+        )}
+
+        {/* Add Stock Modal */}
+        <Portal>
+          <Modal
+            visible={addStockModalVisible}
+            onDismiss={() => {
+              setAddStockModalVisible(false);
+              resetStockForm();
+            }}
+            contentContainerStyle={styles.modalContainer}
+          >
+            <Text style={styles.modalTitle}>Add New Stock</Text>
+            <ScrollView>
+              <DropDownPicker
+                open={productOpen}
+                value={stockForm.productId}
+                items={productItems}
+                setOpen={setProductOpen}
+                setValue={(callback) =>
+                  setStockForm((prev) => ({
+                    ...prev,
+                    productId: callback(prev.productId),
+                  }))
                 }
-                disabled={currentPage === totalPages}
+                setItems={setProductItems}
+                placeholder="Select Product"
+                style={styles.dropdown}
+                dropDownContainerStyle={styles.dropdownContainer}
+              />
+
+              <TextInput
+                label="Total Stock"
+                value={stockForm.totalStock}
+                onChangeText={(val) =>
+                  setStockForm((prev) => ({ ...prev, totalStock: val }))
+                }
+                mode="outlined"
+                keyboardType="numeric"
+                style={styles.modalInput}
+              />
+            </ScrollView>
+            <View style={styles.modalActions}>
+              <Button
+                mode="outlined"
+                onPress={() => {
+                  setAddStockModalVisible(false);
+                  resetStockForm();
+                }}
+                style={styles.modalButton}
               >
-                Next
+                Cancel
+              </Button>
+              <Button
+                mode="contained"
+                onPress={handleAddStock}
+                style={styles.modalButton}
+              >
+                Add Stock
               </Button>
             </View>
-          </Card.Content>
-        </Card>
-      )}
+          </Modal>
+        </Portal>
 
-      {/* Add Stock Modal */}
-      <Portal>
-        <Modal
-          visible={addStockModalVisible}
-          onDismiss={() => setAddStockModalVisible(false)}
-          contentContainerStyle={styles.modalContainer}
-        >
-          <Text style={styles.modalTitle}>Add New Stock</Text>
-          <ScrollView>
-            <DropDownPicker
-              open={productOpen}
-              value={stockForm.productId}
-              items={productItems}
-              setOpen={setProductOpen}
-              setValue={(callback) =>
-                setStockForm((prev) => ({
-                  ...prev,
-                  productId: callback(prev.productId),
-                }))
-              }
-              setItems={setProductItems}
-              placeholder="Select Product"
-              style={styles.dropdown}
-              dropDownContainerStyle={styles.dropdownContainer}
-            />
+        {/* Edit Stock Modal */}
+        <Portal>
+          <Modal
+            visible={editStockModalVisible}
+            onDismiss={() => {
+              setEditStockModalVisible(false);
+              resetStockForm();
+            }}
+            contentContainerStyle={styles.modalContainer}
+          >
+            <Text style={styles.modalTitle}>Edit Stock</Text>
+            <ScrollView>
+              <DropDownPicker
+                open={productOpen}
+                value={stockForm.productId}
+                items={productItems}
+                setOpen={setProductOpen}
+                setValue={(callback) =>
+                  setStockForm((prev) => ({
+                    ...prev,
+                    productId: callback(prev.productId),
+                  }))
+                }
+                setItems={setProductItems}
+                placeholder="Select Product"
+                style={styles.dropdown}
+                dropDownContainerStyle={styles.dropdownContainer}
+              />
 
-            <TextInput
-              label="Total Stock"
-              value={stockForm.totalStock}
-              onChangeText={(val) =>
-                setStockForm((prev) => ({ ...prev, totalStock: val }))
-              }
-              mode="outlined"
-              keyboardType="numeric"
-              style={styles.modalInput}
-            />
-          </ScrollView>
-          <View style={styles.modalActions}>
-            <Button
-              mode="outlined"
-              onPress={() => setAddStockModalVisible(false)}
-              style={styles.modalButton}
-            >
-              Cancel
-            </Button>
-            <Button
-              mode="contained"
-              onPress={handleAddStock}
-              style={styles.modalButton}
-            >
-              Add Stock
-            </Button>
-          </View>
-        </Modal>
-      </Portal>
+              <TextInput
+                label="Total Stock"
+                value={stockForm.totalStock}
+                onChangeText={(val) =>
+                  setStockForm((prev) => ({ ...prev, totalStock: val }))
+                }
+                mode="outlined"
+                keyboardType="numeric"
+                style={styles.modalInput}
+              />
+            </ScrollView>
+            <View style={styles.modalActions}>
+              <Button
+                mode="outlined"
+                onPress={() => {
+                  setEditStockModalVisible(false);
+                  resetStockForm();
+                }}
+                style={styles.modalButton}
+              >
+                Cancel
+              </Button>
+              <Button
+                mode="contained"
+                onPress={handleUpdateStock}
+                style={styles.modalButton}
+              >
+                Update Stock
+              </Button>
+            </View>
+          </Modal>
+        </Portal>
+      </ScrollView>
 
-      {/* Edit Stock Modal */}
-      <Portal>
-        <Modal
-          visible={editStockModalVisible}
-          onDismiss={() => setEditStockModalVisible(false)}
-          contentContainerStyle={styles.modalContainer}
-        >
-          <Text style={styles.modalTitle}>Edit Stock</Text>
-          <ScrollView>
-            <DropDownPicker
-              open={productOpen}
-              value={stockForm.productId}
-              items={productItems}
-              setOpen={setProductOpen}
-              setValue={(callback) =>
-                setStockForm((prev) => ({
-                  ...prev,
-                  productId: callback(prev.productId),
-                }))
-              }
-              setItems={setProductItems}
-              placeholder="Select Product"
-              style={styles.dropdown}
-              dropDownContainerStyle={styles.dropdownContainer}
-            />
-
-            <TextInput
-              label="Total Stock"
-              value={stockForm.totalStock}
-              onChangeText={(val) =>
-                setStockForm((prev) => ({ ...prev, totalStock: val }))
-              }
-              mode="outlined"
-              keyboardType="numeric"
-              style={styles.modalInput}
-            />
-          </ScrollView>
-          <View style={styles.modalActions}>
-            <Button
-              mode="outlined"
-              onPress={() => setEditStockModalVisible(false)}
-              style={styles.modalButton}
-            >
-              Cancel
-            </Button>
-            <Button
-              mode="contained"
-              onPress={handleUpdateStock}
-              style={styles.modalButton}
-            >
-              Update Stock
-            </Button>
-          </View>
-        </Modal>
-      </Portal>
-    </ScrollView>
+      {/* Snackbar Component */}
+      <Snackbar
+        visible={snackbarVisible}
+        onDismiss={onDismissSnackbar}
+        style={[
+          styles.snackbar,
+          snackbarType === "success" && styles.snackbarSuccess,
+          snackbarType === "error" && styles.snackbarError,
+        ]}
+        action={{
+          label: "OK",
+          onPress: onDismissSnackbar,
+        }}
+      >
+        <Text style={styles.snackbarText}>{snackbarMessage}</Text>
+      </Snackbar>
+    </View>
   );
 };
 
@@ -577,6 +678,51 @@ const styles = StyleSheet.create({
   modalButton: { flex: 1, marginHorizontal: 5 },
   dropdown: { marginBottom: 16, borderColor: "#ccc" },
   dropdownContainer: { borderColor: "#ccc", backgroundColor: "#fff" },
+  // Snackbar styles
+  snackbar: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  snackbarSuccess: {
+    backgroundColor: "#4CAF50",
+  },
+  snackbarError: {
+    backgroundColor: "#F44336",
+  },
+  snackbarText: {
+    color: "#fff",
+  },
+  // Mobile-specific styles for cards
+  mobileList: {
+    padding: 8,
+  },
+  mobileCard: {
+    marginBottom: 10,
+    elevation: 2,
+    borderRadius: 8,
+  },
+  mobileCardContent: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    flexWrap: "wrap",
+  },
+  mobileCardTitle: {
+    fontSize: 16,
+    fontFamily: "Poppins_600SemiBold",
+    color: "#2c3e50",
+  },
+  mobileCardSubtitle: {
+    fontSize: 14,
+    fontFamily: "Poppins_400Regular",
+    color: "#7f8c8d",
+    marginTop: 4,
+  },
+  mobileCardActions: {
+    flexDirection: "row",
+  },
 });
 
 export default StockManagementScreen;

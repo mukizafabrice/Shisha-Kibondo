@@ -6,16 +6,15 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
-  Image,
 } from "react-native";
 import {
   Surface,
   Card,
+  Button,
   IconButton,
   Title,
   Caption,
   ProgressBar,
-  Button,
   Avatar,
 } from "react-native-paper";
 import {
@@ -32,6 +31,8 @@ import { getAllDistributions } from "../../services/distributionService";
 
 const HealthWorkerHomeScreen = ({ navigation }) => {
   const { user, logout } = useAuth();
+
+  // --- All hooks at the top ---
   const [stats, setStats] = useState({
     stocks: 0,
     products: 0,
@@ -39,6 +40,7 @@ const HealthWorkerHomeScreen = ({ navigation }) => {
     distributions: 0,
   });
   const [stockBreakdown, setStockBreakdown] = useState([]);
+  const [recentActivity, setRecentActivity] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const [fontsLoaded] = useFonts({
@@ -46,6 +48,7 @@ const HealthWorkerHomeScreen = ({ navigation }) => {
     Poppins_600SemiBold,
   });
 
+  // --- Fetch dashboard data ---
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -101,8 +104,65 @@ const HealthWorkerHomeScreen = ({ navigation }) => {
     };
 
     fetchData();
-  }, []);
+  }, [user?.id]);
 
+  // --- Fetch recent activity ---
+  useEffect(() => {
+    const fetchRecentActivity = async () => {
+      try {
+        const [stocksData, productsData, beneficiariesData, distributionsData] =
+          await Promise.all([
+            getAllStocks(),
+            getAllProducts(),
+            BeneficiaryService.getBeneficiary(user?.id),
+            getAllDistributions(),
+          ]);
+
+        const activities = [];
+
+        beneficiariesData.slice(-3).forEach((b) =>
+          activities.push({
+            type: "beneficiary",
+            message: `New beneficiary registered: ${b.name || "Unnamed"}`,
+            createdAt: new Date(b.createdAt),
+          })
+        );
+
+        productsData.slice(-3).forEach((p) =>
+          activities.push({
+            type: "product",
+            message: `Product updated: ${p.name}`,
+            createdAt: new Date(p.createdAt),
+          })
+        );
+
+        stocksData.slice(-3).forEach((s) =>
+          activities.push({
+            type: "stock",
+            message: `Stock update: ${s.productId?.name || "Unknown Product"}`,
+            createdAt: new Date(s.createdAt),
+          })
+        );
+
+        distributionsData.slice(-3).forEach((d) =>
+          activities.push({
+            type: "distribution",
+            message: `Distributed supplements to beneficiaries`,
+            createdAt: new Date(d.createdAt),
+          })
+        );
+
+        activities.sort((a, b) => b.createdAt - a.createdAt);
+        setRecentActivity(activities.slice(0, 5));
+      } catch (error) {
+        console.error("Error fetching recent activity:", error);
+      }
+    };
+
+    fetchRecentActivity();
+  }, [user?.id]);
+
+  // --- Show loading until data & fonts are ready ---
   if (loading || !fontsLoaded) {
     return (
       <View style={styles.centerContainer}>
@@ -114,22 +174,17 @@ const HealthWorkerHomeScreen = ({ navigation }) => {
   return (
     <Surface style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Header Section */}
+        {/* Header */}
         <View style={styles.header}>
           <View>
             <Text style={styles.greetingText}>
-              Hello,{" "}
-              <Text style={{ fontWeight: "bold", color: "blue" }}>
-                {user.name || "Community Health Worker"}
-              </Text>
-              👋
+              Hello, {user?.name || "Community Health Worker"} 👋
             </Text>
-
             <Caption style={styles.captionText}>
               Welcome back! Here’s your latest dashboard overview.
             </Caption>
           </View>
-          <View style={styles.profileContainer}>
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
             <Avatar.Image
               size={44}
               source={{
@@ -146,47 +201,41 @@ const HealthWorkerHomeScreen = ({ navigation }) => {
             />
           </View>
         </View>
-
-        {/* Statistics Cards */}
+        {/* Stats */}
         <View style={styles.statsContainer}>
           <Card style={styles.statCard}>
             <Card.Content style={styles.statCardContent}>
-              <View style={[styles.iconBox, { backgroundColor: "#DBEAFE" }]}>
-                <Ionicons name="cube-outline" size={28} color="#2563EB" />
-              </View>
+              <Ionicons name="cube-outline" size={28} color="#2563EB" />
               <View style={styles.statInfo}>
                 <Title>{stats.stocks}</Title>
                 <Caption>Total Stock</Caption>
               </View>
             </Card.Content>
           </Card>
+
           <Card style={styles.statCard}>
             <Card.Content style={styles.statCardContent}>
-              <View style={[styles.iconBox, { backgroundColor: "#FEE2E2" }]}>
-                <Ionicons name="pricetags-outline" size={28} color="#DC2626" />
-              </View>
+              <Ionicons name="pricetags-outline" size={28} color="#DC2626" />
               <View style={styles.statInfo}>
                 <Title>{stats.products}</Title>
                 <Caption>Products</Caption>
               </View>
             </Card.Content>
           </Card>
+
           <Card style={styles.statCard}>
             <Card.Content style={styles.statCardContent}>
-              <View style={[styles.iconBox, { backgroundColor: "#FEF9C3" }]}>
-                <Ionicons name="people-outline" size={28} color="#CA8A04" />
-              </View>
+              <Ionicons name="people-outline" size={28} color="#CA8A04" />
               <View style={styles.statInfo}>
                 <Title>{stats.beneficiaries}</Title>
                 <Caption>Beneficiaries</Caption>
               </View>
             </Card.Content>
           </Card>
+
           <Card style={styles.statCard}>
             <Card.Content style={styles.statCardContent}>
-              <View style={[styles.iconBox, { backgroundColor: "#DCFCE7" }]}>
-                <Ionicons name="send-outline" size={28} color="#16A34A" />
-              </View>
+              <Ionicons name="send-outline" size={28} color="#16A34A" />
               <View style={styles.statInfo}>
                 <Title>{stats.distributions}</Title>
                 <Caption>Distributions</Caption>
@@ -194,7 +243,6 @@ const HealthWorkerHomeScreen = ({ navigation }) => {
             </Card.Content>
           </Card>
         </View>
-
         {/* Stock Breakdown */}
         <Card style={styles.visualizationCard}>
           <Card.Content>
@@ -202,7 +250,12 @@ const HealthWorkerHomeScreen = ({ navigation }) => {
             {stockBreakdown.length > 0 ? (
               stockBreakdown.map((item, index) => (
                 <View key={index} style={styles.progressItem}>
-                  <View style={styles.progressRow}>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      justifyContent: "space-between",
+                    }}
+                  >
                     <Text style={styles.productName}>{item.name}</Text>
                     <Text style={styles.progressText}>
                       {item.value} ({Math.round(item.percentage * 100)}%)
@@ -220,46 +273,73 @@ const HealthWorkerHomeScreen = ({ navigation }) => {
             )}
           </Card.Content>
         </Card>
-
-        {/* Quick Actions */}
+        {/* Quick Actions */}{" "}
         <Card style={styles.actionsCard}>
+          {" "}
           <Card.Content>
-            <Title style={styles.cardTitle}>⚡ Quick Actions</Title>
+            {" "}
+            <Title style={styles.cardTitle}>⚡ Quick Actions</Title>{" "}
             <View style={styles.actionsRow}>
+              {" "}
               <Button
                 mode="contained"
                 icon="eye"
                 style={styles.actionButton}
                 onPress={() => navigation.navigate("health-Beneficiaries")}
               >
-                Beneficiaries
-              </Button>
+                {" "}
+                Beneficiaries{" "}
+              </Button>{" "}
               <Button
                 mode="contained"
                 icon="send"
                 style={styles.actionButton}
                 onPress={() => navigation.navigate("Reports")}
               >
-                New Distribution
-              </Button>
-            </View>
-          </Card.Content>
+                {" "}
+                New Distribution{" "}
+              </Button>{" "}
+            </View>{" "}
+          </Card.Content>{" "}
         </Card>
-
         {/* Recent Activity */}
-        <Card style={styles.recentCard}>
+        <Card style={styles.visualizationCard}>
           <Card.Content>
             <Title style={styles.cardTitle}>📝 Recent Activity</Title>
-            <View style={styles.activityItem}>
-              <Ionicons name="checkmark-done" size={20} color="#16A34A" />
-              <Text style={styles.activityText}>
-                Distributed supplements to 12 beneficiaries
-              </Text>
-            </View>
-            <View style={styles.activityItem}>
-              <Ionicons name="cube" size={20} color="#2563EB" />
-              <Text style={styles.activityText}>Updated stock records</Text>
-            </View>
+            {recentActivity.length === 0 ? (
+              <Text style={styles.emptyText}>No recent activity</Text>
+            ) : (
+              recentActivity.map((act, index) => (
+                <View
+                  key={index}
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    marginBottom: 8,
+                  }}
+                >
+                  {act.type === "beneficiary" && (
+                    <Ionicons name="person-add" size={20} color="#F59E0B" />
+                  )}
+                  {act.type === "product" && (
+                    <Ionicons name="cube" size={20} color="#2563EB" />
+                  )}
+                  {act.type === "stock" && (
+                    <Ionicons name="archive" size={20} color="#10B981" />
+                  )}
+                  {act.type === "distribution" && (
+                    <Ionicons name="send" size={20} color="#16A34A" />
+                  )}
+                  <Text
+                    style={styles.activityText}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                  >
+                    {act.message}
+                  </Text>
+                </View>
+              ))
+            )}
           </Card.Content>
         </Card>
       </ScrollView>
@@ -286,8 +366,6 @@ const styles = StyleSheet.create({
     fontFamily: "Poppins_400Regular",
     color: "#64748B",
   },
-  profileContainer: { flexDirection: "row", alignItems: "center" },
-
   statsContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -303,33 +381,7 @@ const styles = StyleSheet.create({
   },
   statCardContent: { flexDirection: "row", alignItems: "center", padding: 12 },
   statInfo: { marginLeft: 12 },
-  iconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  visualizationCard: {
-    borderRadius: 16,
-    backgroundColor: "#fff",
-    elevation: 3,
-    padding: 15,
-    marginBottom: 20,
-  },
-  cardTitle: {
-    fontFamily: "Poppins_600SemiBold",
-    marginBottom: 10,
-    color: "#374151",
-    fontSize: 16,
-  },
   progressItem: { marginBottom: 15 },
-  progressRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 5,
-  },
   productName: {
     fontFamily: "Poppins_600SemiBold",
     fontSize: 14,
@@ -341,7 +393,21 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#475569",
   },
-
+  visualizationCard: {
+    borderRadius: 16,
+    backgroundColor: "#fff",
+    elevation: 3,
+    padding: 15,
+    marginBottom: 20,
+  },
+  emptyText: { textAlign: "center", color: "#9CA3AF", paddingVertical: 20 },
+  activityText: {
+    marginLeft: 8,
+    fontFamily: "Poppins_400Regular",
+    fontSize: 13,
+    color: "#374151",
+    flexShrink: 1,
+  },
   actionsCard: {
     borderRadius: 16,
     backgroundColor: "#fff",
@@ -356,26 +422,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: "#2563EB",
   },
-
-  recentCard: {
-    borderRadius: 16,
-    backgroundColor: "#fff",
-    elevation: 3,
-    padding: 15,
-    marginBottom: 30,
-  },
-  activityItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  activityText: {
-    marginLeft: 8,
-    fontFamily: "Poppins_400Regular",
-    fontSize: 14,
-    color: "#374151",
-  },
-  emptyText: { textAlign: "center", color: "#9CA3AF", paddingVertical: 20 },
 });
 
 export default HealthWorkerHomeScreen;
