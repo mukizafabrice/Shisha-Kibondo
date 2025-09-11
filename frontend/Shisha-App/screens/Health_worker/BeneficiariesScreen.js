@@ -245,20 +245,26 @@ const BeneficiariesScreen = ({ navigation, route }) => {
                       <Text style={styles.name}>
                         {b.firstName} {b.lastName}
                       </Text>
-                      <Chip
-                        style={styles.typeTag}
-                        textStyle={styles.typeTagText}
-                      >
-                        {b.type}
-                      </Chip>
+                      <View style={styles.detailRow}>
+                        <Text style={styles.detailLabel}>Attendance Rate:</Text>
+                        <Text style={styles.detailValue}>
+                          {Number(b.attendanceRate) || 0}%
+                        </Text>
+                      </View>
                     </View>
-                    <View style={{ flexDirection: "row" }}>
+                    <View style={{ flexDirection: "column" }}>
                       <IconButton
                         icon="eye"
                         iconColor={BLUE}
                         onPress={() => openModalWith(b)}
                         size={22}
                       />
+                      <Chip
+                        style={styles.typeTag}
+                        textStyle={styles.typeTagText}
+                      >
+                        {b.type}
+                      </Chip>
                     </View>
                   </View>
                 </Card.Content>

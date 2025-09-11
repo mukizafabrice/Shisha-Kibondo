@@ -135,7 +135,7 @@ const HomeScreen = ({ navigation }) => {
 
         beneficiaries.slice(-3).forEach((b) =>
           activities.push({
-            type: "beneficiary", 
+            type: "beneficiary",
             message: `New beneficiary registered: ${b.type || "Unnamed"}`,
             createdAt: new Date(b.createdAt),
           })
@@ -200,36 +200,42 @@ const HomeScreen = ({ navigation }) => {
       value: stats.totalStock,
       icon: "archive-outline",
       color: "#2563EB",
+      screen: "Stock",
     },
     {
       title: "Users",
       value: stats.totalUsers,
       icon: "people-circle-outline",
       color: "#4ADE80",
+      screen: "Users",
     },
     {
       title: "Beneficiaries",
       value: stats.totalBeneficiaries,
       icon: "heart-outline",
       color: "#14B8A6",
+      screen: "Beneficiaries",
     },
     {
       title: "Products",
       value: stats.totalProducts,
       icon: "layers-outline",
       color: "#FACC15",
+      screen: "ProductsScreen",
     },
     {
       title: "Active",
       value: stats.totalActives,
       icon: "cash-outline",
       color: "#F97316",
+      screen: "Beneficiaries",
     },
     {
       title: "Distributions",
       value: stats.totalDistributions,
       icon: "send-outline",
       color: "#EF4444",
+      screen: "Distributions",
     },
   ];
 
@@ -249,7 +255,11 @@ const HomeScreen = ({ navigation }) => {
       {/* Stat Cards */}
       <View style={styles.statsGrid}>
         {statCards.map((s, i) => (
-          <Card key={i} style={styles.statCard}>
+          <Card
+            key={i}
+            style={styles.statCard}
+            onPress={() => navigation.navigate(s.screen)}
+          >
             <View style={styles.statCardContent}>
               <View
                 style={[styles.iconBox, { backgroundColor: s.color + "20" }]}

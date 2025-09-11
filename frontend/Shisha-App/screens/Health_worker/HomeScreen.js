@@ -187,7 +187,10 @@ const HealthWorkerHomeScreen = ({ navigation }) => {
         </View>
         {/* Stats */}
         <View style={styles.statsContainer}>
-          <Card style={styles.statCard}>
+          <Card
+            style={styles.statCard}
+            onPress={() => navigation.navigate("Stock")}
+          >
             <Card.Content style={styles.statCardContent}>
               <Ionicons name="cube-outline" size={28} color="#2563EB" />
               <View style={styles.statInfo}>
@@ -197,7 +200,10 @@ const HealthWorkerHomeScreen = ({ navigation }) => {
             </Card.Content>
           </Card>
 
-          <Card style={styles.statCard}>
+          <Card
+            style={styles.statCard}
+            onPress={() => navigation.navigate("health-ProductsScreen")}
+          >
             <Card.Content style={styles.statCardContent}>
               <Ionicons name="pricetags-outline" size={28} color="#DC2626" />
               <View style={styles.statInfo}>
@@ -207,7 +213,10 @@ const HealthWorkerHomeScreen = ({ navigation }) => {
             </Card.Content>
           </Card>
 
-          <Card style={styles.statCard}>
+          <Card
+            style={styles.statCard}
+            onPress={() => navigation.navigate("health-Beneficiaries")}
+          >
             <Card.Content style={styles.statCardContent}>
               <Ionicons name="people-outline" size={28} color="#CA8A04" />
               <View style={styles.statInfo}>
@@ -217,7 +226,10 @@ const HealthWorkerHomeScreen = ({ navigation }) => {
             </Card.Content>
           </Card>
 
-          <Card style={styles.statCard}>
+          <Card
+            style={styles.statCard}
+            onPress={() => navigation.navigate("Reports")}
+          >
             <Card.Content style={styles.statCardContent}>
               <Ionicons name="send-outline" size={28} color="#16A34A" />
               <View style={styles.statInfo}>

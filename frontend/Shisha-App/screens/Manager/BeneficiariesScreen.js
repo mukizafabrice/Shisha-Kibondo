@@ -252,39 +252,51 @@ const BeneficiariesScreen = ({ navigation, route }) => {
                 <Card.Content>
                   <View style={styles.rowBetween}>
                     <View>
-                      <Text style={styles.name}>
-                        {b.firstName} {b.lastName}
-                      </Text>
+                      <View>
+                        <Text style={styles.name}>
+                          {b.firstName} {b.lastName}
+                        </Text>
+                        <View style={styles.detailRow}>
+                          <Text style={styles.detailLabel}>
+                            Attendance Rate:
+                          </Text>
+                          <Text style={styles.detailValue}>
+                            {Number(b.attendanceRate) || 0}%
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                    <View>
+                      <View style={{ flexDirection: "row" }}>
+                        <IconButton
+                          icon="eye"
+                          iconColor={BLUE}
+                          onPress={() => openModalWith(b)}
+                          size={22}
+                        />
+                        <IconButton
+                          icon="pencil"
+                          iconColor="#f39c12"
+                          onPress={() =>
+                            navigation.navigate("AddBeneficiary", {
+                              beneficiary: b,
+                            })
+                          }
+                          size={22}
+                        />
+                        <IconButton
+                          icon="delete"
+                          iconColor="#e74c3c"
+                          onPress={() => handleDelete(b._id)}
+                          size={22}
+                        />
+                      </View>
                       <Chip
                         style={styles.typeTag}
                         textStyle={styles.typeTagText}
                       >
                         {b.type}
                       </Chip>
-                    </View>
-                    <View style={{ flexDirection: "row" }}>
-                      <IconButton
-                        icon="eye"
-                        iconColor={BLUE}
-                        onPress={() => openModalWith(b)}
-                        size={22}
-                      />
-                      <IconButton
-                        icon="pencil"
-                        iconColor="#f39c12"
-                        onPress={() =>
-                          navigation.navigate("AddBeneficiary", {
-                            beneficiary: b,
-                          })
-                        }
-                        size={22}
-                      />
-                      <IconButton
-                        icon="delete"
-                        iconColor="#e74c3c"
-                        onPress={() => handleDelete(b._id)}
-                        size={22}
-                      />
                     </View>
                   </View>
                 </Card.Content>
@@ -572,6 +584,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#e0e0e0",
     alignSelf: "flex-start",
     marginTop: 4,
+    marginLeft: 20,
   },
   typeTagText: {
     fontFamily: "Poppins_400Regular",
