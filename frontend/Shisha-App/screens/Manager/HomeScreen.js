@@ -135,8 +135,8 @@ const HomeScreen = ({ navigation }) => {
 
         beneficiaries.slice(-3).forEach((b) =>
           activities.push({
-            type: "beneficiary",
-            message: `New beneficiary registered: ${b.name || "Unnamed"}`,
+            type: "beneficiary", 
+            message: `New beneficiary registered: ${b.type || "Unnamed"}`,
             createdAt: new Date(b.createdAt),
           })
         );
@@ -168,7 +168,6 @@ const HomeScreen = ({ navigation }) => {
         activities.sort((a, b) => b.createdAt - a.createdAt);
         setRecentActivity(activities.slice(0, 5));
 
-        // ---- Stats ----
         setStats({
           totalBeneficiaries,
           totalProducts,
@@ -241,9 +240,9 @@ const HomeScreen = ({ navigation }) => {
         <View>
           <Text style={styles.greeting}>
             Welcome back,{" "}
-            <Text style={styles.greetingHighlight}>{user?.name}</Text> 👋
+            <Text style={styles.greetingHighlight}>{user?.name}</Text>
           </Text>
-          <Caption>Here’s your dashboard overview</Caption>
+          <Text style={styles.caption}>Here’s your dashboard overview</Text>
         </View>
       </View>
 

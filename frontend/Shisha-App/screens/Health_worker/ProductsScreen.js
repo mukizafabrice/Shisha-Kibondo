@@ -170,12 +170,6 @@ const ProductScreen = ({ navigation }) => {
           {/* Header with Title and Add Button */}
           <View style={styles.header}>
             <Text style={styles.headerTitle}>Products</Text>
-            <IconButton
-              icon="plus-circle"
-              size={35}
-              iconColor="#27ae60"
-              onPress={handleAddProduct}
-            />
           </View>
 
           {/* Search and Sort Filter Section */}
@@ -248,72 +242,12 @@ const ProductScreen = ({ navigation }) => {
                       </Text>
                     ) : null}
                   </View>
-                  <View style={styles.actionsContainer}>
-                    <IconButton
-                      icon="pencil"
-                      size={20}
-                      iconColor="#f39c12"
-                      onPress={() => openEditModal(product)}
-                      style={{ margin: 0 }}
-                    />
-                    <IconButton
-                      icon="delete"
-                      size={20}
-                      iconColor="#e74c3c"
-                      onPress={() => handleDelete(product._id)}
-                      style={{ margin: 0 }}
-                    />
-                  </View>
                 </View>
               </Card>
             ))}
           </ScrollView>
 
           {/* Edit Modal */}
-          <Portal>
-            <Modal
-              visible={editModalVisible}
-              onDismiss={() => setEditModalVisible(false)}
-              contentContainerStyle={styles.modal}
-            >
-              <Text style={styles.modalTitle}>Edit Product</Text>
-              <TextInput
-                label="Product Name"
-                value={editName}
-                onChangeText={setEditName}
-                mode="outlined"
-                style={styles.input}
-                outlineColor="#dcdcdc"
-              />
-              <TextInput
-                label="Description"
-                value={editDescription}
-                onChangeText={setEditDescription}
-                mode="outlined"
-                multiline
-                numberOfLines={3}
-                style={[styles.input, styles.descriptionInput]}
-                outlineColor="#dcdcdc"
-              />
-              <View style={styles.modalActions}>
-                <Button
-                  mode="outlined"
-                  onPress={() => setEditModalVisible(false)}
-                  style={styles.modalButton}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  mode="contained"
-                  onPress={handleUpdate}
-                  buttonColor="#007AFF"
-                  style={styles.modalButton}
-                >
-                  Update
-                </Button>
-              </View>
-            </Modal>
-          </Portal>
         </Surface>
       </KeyboardAvoidingView>
     </Provider>

@@ -12,8 +12,9 @@ import {
   TextInput,
   Button,
   IconButton,
-  Menu,
   ActivityIndicator,
+  Chip,
+  Surface,
 } from "react-native-paper";
 import { getTransactions } from "../../services/transactionService";
 import { getAllProducts } from "../../services/ProductService";
@@ -24,9 +25,17 @@ import {
   Poppins_600SemiBold,
   Poppins_700Bold,
 } from "@expo-google-fonts/poppins";
+import { Ionicons } from "@expo/vector-icons";
 
 const { width } = Dimensions.get("window");
 const isDesktop = width > 768;
+
+const PRIMARY_COLOR = "#3498db";
+const ACCENT_COLOR = "#2ecc71";
+const DANGER_COLOR = "#e74c3c";
+const BACKGROUND_COLOR = "#f0f4f7";
+const CARD_BG = "#ffffff";
+const TEXT_COLOR = "#34495e";
 
 const StockTransactionsScreen = () => {
   const [fontsLoaded] = useFonts({
@@ -41,12 +50,10 @@ const StockTransactionsScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Search & Filter
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("ALL");
   const [sortDirection, setSortDirection] = useState("DESC");
 
-  // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -79,11 +86,9 @@ const StockTransactionsScreen = () => {
     return prod?.name || "Unknown";
   };
 
-  // Filtered + Sorted
   const filteredTransactions = useMemo(() => {
     let data = [...transactions];
 
-    // Search
     if (searchQuery.trim()) {
       data = data.filter((t) =>
         getProductName(t.productId)
@@ -92,12 +97,10 @@ const StockTransactionsScreen = () => {
       );
     }
 
-    // Type filter
     if (typeFilter !== "ALL") {
       data = data.filter((t) => t.type === typeFilter);
     }
 
-    // Sort by date
     data.sort((a, b) => {
       const dateA = new Date(a.createdAt).getTime();
       const dateB = new Date(b.createdAt).getTime();
@@ -105,16 +108,14 @@ const StockTransactionsScreen = () => {
     });
 
     return data;
-  }, [transactions, searchQuery, typeFilter, sortDirection]);
+  }, [transactions, searchQuery, typeFilter, sortDirection, products]);
 
-  // Pagination
   const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
   const paginatedTransactions = filteredTransactions.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
 
-  // Render functions
   const renderTableHeader = () => (
     <View style={styles.tableHeader}>
       <Text style={[styles.headerText, { flex: 3 }]}>Product</Text>
@@ -124,7 +125,7 @@ const StockTransactionsScreen = () => {
       <Text style={[styles.headerText, { flex: 1, textAlign: "center" }]}>
         Quantity
       </Text>
-      <Text style={[styles.headerText, { flex: 2, textAlign: "center" }]}>
+      <Text style={[styles.headerText, { flex: 2, textAlign: "right" }]}>
         Date
       </Text>
     </View>
@@ -144,7 +145,8 @@ const StockTransactionsScreen = () => {
           {
             flex: 1,
             textAlign: "center",
-            color: t.type === "IN" ? "#2ecc71" : "#e74c3c",
+            color: t.type === "IN" ? ACCENT_COLOR : DANGER_COLOR,
+            fontFamily: "Poppins_600SemiBold",
           },
         ]}
       >
@@ -153,7 +155,7 @@ const StockTransactionsScreen = () => {
       <Text style={[styles.cell, { flex: 1, textAlign: "center" }]}>
         {t.totalStock}
       </Text>
-      <Text style={[styles.cell, { flex: 2, textAlign: "center" }]}>
+      <Text style={[styles.cell, { flex: 2, textAlign: "right" }]}>
         {new Date(t.createdAt).toLocaleDateString()}
       </Text>
     </View>
@@ -161,25 +163,30 @@ const StockTransactionsScreen = () => {
 
   const renderMobileTransactionCard = (t) => (
     <Card key={t._id} style={styles.mobileCard}>
-      <Card.Content>
-        <View style={styles.mobileCardContent}>
+      <Card.Content style={styles.mobileCardContent}>
+        <View style={styles.mobileCardRow}>
           <Text style={styles.mobileCardTitle}>
             {getProductName(t.productId)}
           </Text>
-          <View style={styles.mobileCardInfo}>
-            <Text
-              style={[
-                styles.mobileCardSubtitle,
-                { color: t.type === "IN" ? "#2ecc71" : "#e74c3c" },
-              ]}
-            >
-              {t.type}
-            </Text>
-            <Text style={styles.mobileCardSubtitle}>Qty: {t.totalStock}</Text>
-            <Text style={styles.mobileCardSubtitle}>
-              Date: {new Date(t.createdAt).toLocaleDateString()}
-            </Text>
-          </View>
+          <Text
+            style={[
+              styles.mobileCardSubtitle,
+              {
+                color: t.type === "IN" ? ACCENT_COLOR : DANGER_COLOR,
+                fontFamily: "Poppins_600SemiBold",
+              },
+            ]}
+          >
+            {t.type}
+          </Text>
+        </View>
+        <View style={styles.mobileCardRow}>
+          <Text style={styles.mobileCardSubtitle}>
+            Quantity: {t.totalStock}
+          </Text>
+          <Text style={styles.mobileCardSubtitle}>
+            Date: {new Date(t.createdAt).toLocaleDateString()}
+          </Text>
         </View>
       </Card.Content>
     </Card>
@@ -188,177 +195,254 @@ const StockTransactionsScreen = () => {
   if (loading || !fontsLoaded) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color={PRIMARY_COLOR} />
         <Text style={styles.loadingText}>Loading transactions...</Text>
       </View>
     );
   }
 
   return (
-    <ScrollView
-      style={styles.container}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-      }
-    >
-      <Card style={styles.headerCard}>
-        <View style={styles.headerContent}>
-          <Text style={styles.title}>Stock Transactions</Text>
-          <Text style={styles.subtitle}>History of inventory changes</Text>
-        </View>
-      </Card>
-      {/* Controls: Search, Filter, Sort */}
-      <Card style={styles.controlsCard}>
-        <Card.Content>
-          <TextInput
-            label="Search by product..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            mode="outlined"
-            left={<TextInput.Icon icon="magnify" />}
-            style={styles.input}
+    <Surface style={styles.container}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
+        {/* Header Section with Icon */}
+        <View style={styles.header}>
+          <Ionicons
+            name="receipt-outline"
+            size={32}
+            color={CARD_BG}
+            style={styles.headerIcon}
           />
-          <View style={styles.row}>
-            <MenuFilter
-              title="Type"
-              value={typeFilter}
-              options={["ALL", "IN", "OUT"]}
-              onSelect={setTypeFilter}
+          <Text style={styles.headerTitle}>Stock Transactions</Text>
+          <Text style={styles.headerSubtitle}>
+            A comprehensive history of inventory changes
+          </Text>
+        </View>
+
+        {/* Controls Section: Search and Filters */}
+        <Card style={styles.controlsCard}>
+          <Card.Content>
+            <TextInput
+              placeholder="Search by product name..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              mode="outlined"
+              left={<TextInput.Icon icon="magnify" />}
+              style={styles.input}
+              outlineStyle={styles.inputOutline}
             />
-            <MenuFilter
-              title="Sort by Date"
-              value={sortDirection}
-              options={["ASC", "DESC"]}
-              onSelect={setSortDirection}
-            />
-          </View>
-        </Card.Content>
-      </Card>
-      {/* Transaction List/Table */}
-      <Card style={styles.tableCard}>
-        {isDesktop ? (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={[styles.table, { minWidth: 400 }]}>
-              {renderTableHeader()}
-              {paginatedTransactions.length > 0 ? (
-                paginatedTransactions.map(renderTableRow)
-              ) : (
-                <Text style={styles.noData}>No transactions found.</Text>
-              )}
+
+            <View style={styles.filterRow}>
+              <Text style={styles.filterLabel}>Type:</Text>
+              <View style={styles.chipContainer}>
+                {["ALL", "IN", "OUT"].map((type) => (
+                  <Chip
+                    key={type}
+                    onPress={() => setTypeFilter(type)}
+                    style={[
+                      styles.chip,
+                      typeFilter === type && styles.selectedChip,
+                    ]}
+                    textStyle={[
+                      styles.chipText,
+                      typeFilter === type && styles.selectedChipText,
+                    ]}
+                    selected={typeFilter === type}
+                    showSelectedCheck={false}
+                  >
+                    {type}
+                  </Chip>
+                ))}
+              </View>
             </View>
-          </ScrollView>
-        ) : (
-          <View style={styles.mobileList}>
-            {paginatedTransactions.length > 0 ? (
-              paginatedTransactions.map(renderMobileTransactionCard)
+
+            <View style={styles.filterRow}>
+              <Text style={styles.filterLabel}>Sort by Date:</Text>
+              <View style={styles.chipContainer}>
+                {["DESC", "ASC"].map((direction) => (
+                  <Chip
+                    key={direction}
+                    onPress={() => setSortDirection(direction)}
+                    style={[
+                      styles.chip,
+                      sortDirection === direction && styles.selectedChip,
+                    ]}
+                    textStyle={[
+                      styles.chipText,
+                      sortDirection === direction && styles.selectedChipText,
+                    ]}
+                    selected={sortDirection === direction}
+                    showSelectedCheck={false}
+                  >
+                    {direction === "DESC" ? "Newest" : "Oldest"}
+                  </Chip>
+                ))}
+              </View>
+            </View>
+          </Card.Content>
+        </Card>
+
+        {/* Transaction List/Table */}
+        <Card style={styles.listCard}>
+          {paginatedTransactions.length > 0 ? (
+            isDesktop ? (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <View style={styles.table}>
+                  {renderTableHeader()}
+                  {paginatedTransactions.map(renderTableRow)}
+                </View>
+              </ScrollView>
             ) : (
-              <Text style={styles.noData}>No transactions found.</Text>
-            )}
+              <View style={styles.mobileList}>
+                {paginatedTransactions.map(renderMobileTransactionCard)}
+              </View>
+            )
+          ) : (
+            <Text style={styles.noData}>No transactions found.</Text>
+          )}
+        </Card>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <View style={styles.pagination}>
+            <Button
+              icon="arrow-left"
+              mode="contained"
+              onPress={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              buttonColor={PRIMARY_COLOR}
+              labelStyle={styles.paginationButtonLabel}
+            >
+              Previous
+            </Button>
+            <Text style={styles.pageInfo}>
+              Page {currentPage} of {totalPages}
+            </Text>
+            <Button
+              icon="arrow-right"
+              mode="contained"
+              onPress={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              buttonColor={PRIMARY_COLOR}
+              labelStyle={styles.paginationButtonLabel}
+            >
+              Next
+            </Button>
           </View>
         )}
-      </Card>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <View style={styles.pagination}>
-          <Button
-            mode="outlined"
-            onPress={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            disabled={currentPage === 1}
-          >
-            Previous
-          </Button>
-          <Text style={styles.pageInfo}>
-            Page {currentPage} of {totalPages}
-          </Text>
-          <Button
-            mode="outlined"
-            onPress={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-            disabled={currentPage === totalPages}
-          >
-            Next
-          </Button>
-        </View>
-      )}
-    </ScrollView>
-  );
-};
-
-// Reusable Filter Menu
-const MenuFilter = ({ title, value, options, onSelect }) => {
-  const [visible, setVisible] = useState(false);
-  return (
-    <Menu
-      visible={visible}
-      onDismiss={() => setVisible(false)}
-      anchor={
-        <Button
-          mode="outlined"
-          onPress={() => setVisible(true)}
-          style={{ marginRight: 8 }}
-        >
-          {title}: {value}
-        </Button>
-      }
-    >
-      {options.map((opt) => (
-        <Menu.Item
-          key={opt}
-          title={opt}
-          onPress={() => {
-            onSelect(opt);
-            setVisible(false);
-          }}
-        />
-      ))}
-    </Menu>
+      </ScrollView>
+    </Surface>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: "#f0f4f7" },
-  center: { flex: 1, justifyContent: "center", alignItems: "center" },
+  container: {
+    flex: 1,
+    padding: 16,
+    backgroundColor: BACKGROUND_COLOR,
+  },
+  center: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: BACKGROUND_COLOR,
+  },
   loadingText: {
     marginTop: 10,
     fontSize: 16,
     fontFamily: "Poppins_400Regular",
     color: "#7f8c8d",
   },
-  headerCard: { marginBottom: 16, borderRadius: 12, elevation: 4 },
-  headerContent: { padding: 20, alignItems: "center" },
-  title: {
-    fontSize: 24,
-    fontFamily: "Poppins_700Bold",
-    color: "#2c3e50",
-    textAlign: "center",
+  header: {
+    padding: 30,
+    marginBottom: 20,
+    backgroundColor: PRIMARY_COLOR,
+    borderRadius: 20,
+    alignItems: "center",
   },
-  subtitle: {
+  headerIcon: {
+    marginBottom: 10,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontFamily: "Poppins_700Bold",
+    color: CARD_BG,
+  },
+  headerSubtitle: {
     fontSize: 14,
     fontFamily: "Poppins_400Regular",
-    color: "#7f8c8d",
-    textAlign: "center",
-    marginTop: 4,
+    color: CARD_BG,
+    opacity: 0.8,
   },
   controlsCard: {
-    marginBottom: 16,
-    borderRadius: 12,
-    elevation: 2,
-    padding: 8,
+    marginBottom: 20,
+    borderRadius: 16,
+    elevation: 4,
+    backgroundColor: CARD_BG,
+    padding: 10,
   },
-  input: { marginBottom: 12, backgroundColor: "#fff" },
-  row: { flexDirection: "row", marginBottom: 8 },
-  tableCard: { flex: 1, elevation: 2, marginBottom: 16, borderRadius: 8 },
-  table: {
-    minWidth: 400,
-    backgroundColor: "#fff",
+  input: {
+    marginBottom: 12,
+    backgroundColor: BACKGROUND_COLOR,
+  },
+  inputOutline: {
+    borderRadius: 10,
+  },
+  filterRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    marginBottom: 10,
+  },
+  filterLabel: {
+    fontFamily: "Poppins_600SemiBold",
+    fontSize: 14,
+    color: TEXT_COLOR,
+    marginRight: 10,
+  },
+  chipContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  chip: {
+    backgroundColor: BACKGROUND_COLOR,
+    borderColor: BACKGROUND_COLOR,
     borderRadius: 8,
+  },
+  chipText: {
+    fontFamily: "Poppins_500Medium",
+    fontSize: 13,
+    color: TEXT_COLOR,
+  },
+  selectedChip: {
+    backgroundColor: PRIMARY_COLOR,
+    borderColor: PRIMARY_COLOR,
+  },
+  selectedChipText: {
+    color: CARD_BG,
+  },
+  listCard: {
+    flex: 1,
+    elevation: 4,
+    marginBottom: 16,
+    borderRadius: 16,
+    backgroundColor: CARD_BG,
+  },
+  table: {
+    flex: 1,
+    padding: 16,
   },
   tableHeader: {
     flexDirection: "row",
     paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#ddd",
+    backgroundColor: PRIMARY_COLOR,
+    borderRadius: 8,
+    marginBottom: 8,
   },
   headerText: {
     color: "#fff",
@@ -369,62 +453,65 @@ const styles = StyleSheet.create({
   tableRow: {
     flexDirection: "row",
     paddingVertical: 12,
-    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: BACKGROUND_COLOR,
   },
-  evenRow: { backgroundColor: "#f8faff" },
-  oddRow: { backgroundColor: "#fff" },
+  evenRow: { backgroundColor: CARD_BG },
+  oddRow: { backgroundColor: BACKGROUND_COLOR },
   cell: {
     fontSize: 14,
     fontFamily: "Poppins_400Regular",
-    color: "#2c3e50",
+    color: TEXT_COLOR,
   },
   noData: {
     textAlign: "center",
-    padding: 20,
+    padding: 30,
     color: "#7f8c8d",
-    fontStyle: "italic",
+    fontFamily: "Poppins_400Regular",
   },
   pagination: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginTop: 12,
     alignItems: "center",
+    marginTop: 12,
     paddingHorizontal: 16,
+  },
+  paginationButtonLabel: {
+    fontFamily: "Poppins_600SemiBold",
+    fontSize: 14,
   },
   pageInfo: {
     fontSize: 14,
     fontFamily: "Poppins_600SemiBold",
-    color: "#7f8c8d",
+    color: TEXT_COLOR,
   },
-  // Mobile-specific styles for cards
   mobileList: {
-    padding: 8,
+    padding: 10,
   },
   mobileCard: {
     marginBottom: 10,
     elevation: 2,
-    borderRadius: 8,
+    borderRadius: 12,
+    backgroundColor: CARD_BG,
   },
   mobileCardContent: {
-    flexDirection: "column",
+    paddingVertical: 12,
+  },
+  mobileCardRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 4,
   },
   mobileCardTitle: {
     fontSize: 16,
     fontFamily: "Poppins_600SemiBold",
-    color: "#2c3e50",
-    marginBottom: 4,
-  },
-  mobileCardInfo: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    flexWrap: "wrap",
+    color: TEXT_COLOR,
   },
   mobileCardSubtitle: {
     fontSize: 14,
     fontFamily: "Poppins_400Regular",
     color: "#7f8c8d",
-    marginRight: 10,
   },
 });
 

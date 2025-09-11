@@ -38,15 +38,15 @@ const LoginScreen = ({ navigation }) => {
     }
   };
 
-
   const handleForgotPassword = () => {
-    // Navigate to a "Forgot Password" screen.
-    // navigation.navigate('ForgotPassword');
-    Alert.alert("Forgot Password", "Navigating to Forgot Password screen...");
+    navigation.navigate("ForgotPassword");
   };
 
   return (
-    <ImageBackground source={require('../assets/background.jpg')} style={styles.background}>
+    <ImageBackground
+      source={require("../assets/background.jpg")}
+      style={styles.background}
+    >
       <SafeAreaView style={styles.safeArea}>
         <KeyboardAvoidingView
           style={styles.container}
@@ -56,7 +56,7 @@ const LoginScreen = ({ navigation }) => {
             <View style={styles.surface}>
               <View style={styles.content}>
                 <Image
-                  source={require('../assets/logo.png')}
+                  source={require("../assets/logo.png")}
                   style={styles.logo}
                 />
                 <Text style={styles.title}>Welcome back</Text>
@@ -73,7 +73,7 @@ const LoginScreen = ({ navigation }) => {
                   autoCapitalize="none"
                   mode="outlined"
                   style={styles.input}
-                  theme={{ colors: { primary: '#007AFF' } }}
+                  theme={{ colors: { primary: "#007AFF" } }}
                 />
                 <TextInput
                   label="Password"
@@ -82,8 +82,13 @@ const LoginScreen = ({ navigation }) => {
                   secureTextEntry={!showPassword}
                   mode="outlined"
                   style={styles.input}
-                  theme={{ colors: { primary: '#007AFF' } }}
-                  right={<TextInput.Icon icon={showPassword ? "eye-off" : "eye"} onPress={() => setShowPassword(!showPassword)} />}
+                  theme={{ colors: { primary: "#007AFF" } }}
+                  right={
+                    <TextInput.Icon
+                      icon={showPassword ? "eye-off" : "eye"}
+                      onPress={() => setShowPassword(!showPassword)}
+                    />
+                  }
                 />
 
                 <Button
@@ -110,19 +115,35 @@ const LoginScreen = ({ navigation }) => {
           </ScrollView>
 
           <View style={styles.footer}>
-            <Text style={styles.footerLink} onPress={() => Alert.alert("About Us", "About Us page")}>
+            <Text
+              style={styles.footerLink}
+              onPress={() => Alert.alert("About Us", "About Us page")}
+            >
               About Us
             </Text>
             <Text style={styles.footerSeparator}> | </Text>
-            <Text style={styles.footerLink} onPress={() => Alert.alert("Privacy Policy", "Privacy Policy page")}>
+            <Text
+              style={styles.footerLink}
+              onPress={() =>
+                Alert.alert("Privacy Policy", "Privacy Policy page")
+              }
+            >
               Privacy Policy
             </Text>
             <Text style={styles.footerSeparator}> | </Text>
-            <Text style={styles.footerLink} onPress={() => Alert.alert("Terms of Service", "Terms of Service page")}>
+            <Text
+              style={styles.footerLink}
+              onPress={() =>
+                Alert.alert("Terms of Service", "Terms of Service page")
+              }
+            >
               Terms of Service
             </Text>
             <Text style={styles.footerSeparator}> | </Text>
-            <Text style={styles.footerLink} onPress={() => Alert.alert("Contact Us", "Contact Us page")}>
+            <Text
+              style={styles.footerLink}
+              onPress={() => Alert.alert("Contact Us", "Contact Us page")}
+            >
               Contact Us
             </Text>
           </View>
@@ -192,7 +213,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     borderRadius: 25,
     height: 50,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   forgotButton: {
     marginTop: 15,

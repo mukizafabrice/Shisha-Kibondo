@@ -62,7 +62,7 @@ const BeneficiariesScreen = ({ navigation, route }) => {
       const userId = user?.id;
       console.log("Fetching beneficiaries for userId:", userId);
       const data = await BeneficiaryService.getBeneficiary(userId);
-      setBeneficiaries(data.data || []);
+      setBeneficiaries(data || []);
     } catch (err) {
       console.error("fetchBeneficiaries:", err);
       Alert.alert("Error", "Failed to fetch beneficiaries.");
@@ -164,16 +164,6 @@ const BeneficiariesScreen = ({ navigation, route }) => {
         {/* Header */}
         <View style={styles.topRow}>
           <Button
-            icon="account-plus"
-            mode="contained"
-            onPress={() => navigation.navigate("AddBeneficiary", { userId })}
-            style={styles.addButton}
-            buttonColor={BLUE}
-            labelStyle={styles.buttonLabel}
-          >
-            Add Beneficiary
-          </Button>
-          <Button
             icon="refresh"
             mode="outlined"
             onPress={fetchBeneficiaries}
@@ -267,22 +257,6 @@ const BeneficiariesScreen = ({ navigation, route }) => {
                         icon="eye"
                         iconColor={BLUE}
                         onPress={() => openModalWith(b)}
-                        size={22}
-                      />
-                      <IconButton
-                        icon="pencil"
-                        iconColor="#f39c12"
-                        onPress={() =>
-                          navigation.navigate("AddBeneficiary", {
-                            beneficiary: b,
-                          })
-                        }
-                        size={22}
-                      />
-                      <IconButton
-                        icon="delete"
-                        iconColor="#e74c3c"
-                        onPress={() => handleDelete(b._id)}
                         size={22}
                       />
                     </View>

@@ -8,7 +8,8 @@ import { useAuth } from "../context/AuthContext";
 
 // Import screens
 import LoginScreen from "../screens/LoginScreen";
-
+import ResetPasswordScreen from "../screens/ResetPasswordScreen";
+import ForgotPasswordScreen from "../screens/ForgotPasswordScreen";
 // Manager Screens
 import ManagerHomeScreen from "../screens/Manager/HomeScreen";
 import ManagerSettingsScreen from "../screens/Manager/SettingsScreen";
@@ -254,11 +255,23 @@ const AppNavigator = () => {
   return (
     <Stack.Navigator>
       {!user ? (
-        <Stack.Screen
-          name="Login"
-          component={LoginScreen}
-          options={{ headerShown: false }}
-        />
+        <>
+          <Stack.Screen
+            name="Login"
+            component={LoginScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="ForgotPassword"
+            component={ForgotPasswordScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="ResetPassword"
+            component={ResetPasswordScreen}
+            options={{ headerShown: false }}
+          />
+        </>
       ) : user.role === "manager" ? (
         <>
           {/* Main Tabs */}

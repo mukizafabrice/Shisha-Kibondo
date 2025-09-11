@@ -24,6 +24,16 @@ export const createBeneficiary = async (req, res) => {
       });
     }
 
+    // Determine total program days based on type
+    let totalProgramDays = 0;
+    if (type === "pregnant") {
+      totalProgramDays = 180; // 6 months
+    } else if (type === "breastfeeding") {
+      totalProgramDays = 365; // 12 months
+    } else if (type === "child") {
+      totalProgramDays = 730; // 24 months
+    }
+
     const beneficiary = new Beneficiaries({
       userId,
       nationalId,
@@ -32,12 +42,13 @@ export const createBeneficiary = async (req, res) => {
       village,
       type,
       status: "active",
+      totalProgramDays, // Include total program days
     });
 
     await beneficiary.save();
 
-    // Populate the assigned user information
-    await beneficiary.populate("assignedUser", "name email role");
+    // Populate the user information
+    await beneficiary.populate("userId", "name email role");
 
     res.status(201).json({
       success: true,
@@ -51,7 +62,6 @@ export const createBeneficiary = async (req, res) => {
     });
   }
 };
-
 // Get all beneficiaries
 export const getBeneficiaries = async (req, res) => {
   try {
@@ -133,7 +143,6 @@ export const getBeneficiary = async (req, res) => {
 };
 export const fetchBeneficiaries = async (req, res) => {
   try {
-
     const beneficiary = await Beneficiaries.find()
       .populate("programDays")
       .populate("userId", "name email role");

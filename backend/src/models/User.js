@@ -22,7 +22,7 @@ const userSchema = new mongoose.Schema(
     },
     nationalId: {
       type: String,
-      required: function() {
+      required: function () {
         // Only require nationalId for new users, not for existing ones
         return this.isNew;
       },
@@ -39,6 +39,20 @@ const userSchema = new mongoose.Schema(
       type: String,
       enum: ["manager", "umunyabuzima"],
       default: "umunyabuzima",
+    },
+
+    // 🔑 Reset password fields
+    resetPasswordToken: {
+      type: String, // store OTP as string (numeric but easier to handle as string)
+      required: false,
+    },
+    resetPasswordExpires: {
+      type: Date, // expiry time
+      required: false,
+    },
+    resetPasswordVerified: {
+      type: Boolean, // optional: mark OTP as used
+      default: false,
     },
   },
   { timestamps: true }

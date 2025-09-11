@@ -12,23 +12,20 @@ export const createDistribution = async (req, res) => {
         .json({ message: "All required fields must be provided." });
     }
 
-    // 1. Check stock availability
+    // Check stock availability
     const stock = await Stock.findOne({ productId });
-    if (!stock) {
+    if (!stock)
       return res
         .status(400)
         .json({ message: "No stock available for this product." });
-    }
-
-    if (stock.totalStock < quantityKg) {
+    if (stock.totalStock < quantityKg)
       return res.status(400).json({ message: "Not enough stock available." });
-    }
 
-    // 2. Subtract stock
+    // Subtract stock
     stock.totalStock -= quantityKg;
     await stock.save();
 
-    // 3. Create the distribution
+    // Create the distribution
     const distribution = await Distribution.create({
       beneficiaryId,
       productId,
@@ -36,14 +33,19 @@ export const createDistribution = async (req, res) => {
       userId,
     });
 
-    // 4. Update beneficiary program progress
+    // Update beneficiary program progress
+    // Update beneficiary program progress
     const beneficiary = await Beneficiaries.findById(beneficiaryId);
     if (beneficiary) {
-      beneficiary.totalProgramDays += 1; // or keep static if pre-set
+      if (beneficiary.completedDays >= beneficiary.totalProgramDays) {
+        return res.status(400).json({
+          message:
+            "Attendance exceeds total program days. Progress update blocked.",
+        });
+      }
+
       beneficiary.completedDays += 1;
-      beneficiary.attendanceRate = Math.round(
-        (beneficiary.completedDays / beneficiary.totalProgramDays) * 100
-      );
+      beneficiary.calculateAttendanceRate(); // updates attendanceRate
       await beneficiary.save();
     }
 

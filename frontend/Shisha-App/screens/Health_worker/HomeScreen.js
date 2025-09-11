@@ -178,27 +178,11 @@ const HealthWorkerHomeScreen = ({ navigation }) => {
         <View style={styles.header}>
           <View>
             <Text style={styles.greetingText}>
-              Hello, {user?.name || "Community Health Worker"} 👋
+              Hello, {user?.name || "Community Health Worker"}
             </Text>
-            <Caption style={styles.captionText}>
+            <Text style={styles.captionText}>
               Welcome back! Here’s your latest dashboard overview.
-            </Caption>
-          </View>
-          <View style={{ flexDirection: "row", alignItems: "center" }}>
-            <Avatar.Image
-              size={44}
-              source={{
-                uri:
-                  user?.avatar ||
-                  "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
-              }}
-            />
-            <IconButton
-              icon="logout"
-              color="#EF4444"
-              size={24}
-              onPress={logout}
-            />
+            </Text>
           </View>
         </View>
         {/* Stats */}
