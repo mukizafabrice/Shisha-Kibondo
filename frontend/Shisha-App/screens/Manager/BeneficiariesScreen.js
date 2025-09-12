@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   ScrollView,
   Platform,
+  Dimensions,
 } from "react-native";
 import {
   TextInput,
@@ -33,6 +34,9 @@ import BeneficiaryService from "../../services/beneficiaryService";
 const BLUE = "#007AFF";
 const ITEMS_PER_PAGE = 8;
 const PROGRAM_DAYS = 180; // 6 months
+
+// Get screen height for responsive maxHeight
+const { height: screenHeight } = Dimensions.get("window");
 
 const BeneficiariesScreen = ({ navigation, route }) => {
   const { logout } = useAuth();
@@ -244,68 +248,91 @@ const BeneficiariesScreen = ({ navigation, route }) => {
           </View>
         </View>
 
-        {/* Beneficiary List */}
-        <ScrollView style={styles.listContainer}>
-          {paginatedBeneficiaries.length > 0 ? (
-            paginatedBeneficiaries.map((b) => (
-              <Card key={b._id} style={styles.card}>
-                <Card.Content>
-                  <View style={styles.rowBetween}>
-                    <View>
-                      <View>
+        {/* Beneficiary List container with a fixed height */}
+        <View style={styles.listContainerWrapper}>
+          <ScrollView
+            style={styles.listContainer}
+            contentContainerStyle={styles.listContentContainer}
+            showsVerticalScrollIndicator={true}
+          >
+            {paginatedBeneficiaries.length > 0 ? (
+              paginatedBeneficiaries.map((b) => (
+                <Card key={b._id} style={styles.card}>
+                  <Card.Content>
+                    <View style={styles.rowBetween}>
+                      {/* Left side: Beneficiary details */}
+                      <View style={{ flex: 1, paddingRight: 8 }}>
                         <Text style={styles.name}>
                           {b.firstName} {b.lastName}
                         </Text>
                         <View style={styles.detailRow}>
-                          <Text style={styles.detailLabel}>
-                            Attendance Rate:
+                          <Text style={styles.detailLabel}>Status:</Text>
+                          <Text
+                            style={[
+                              styles.detailValue,
+                              {
+                                color:
+                                  b.status === "active" ? "#27ae60" : "#e67e22",
+                              },
+                            ]}
+                          >
+                            {b.status}
                           </Text>
+                        </View>
+                        <View style={styles.detailRow}>
+                          <Text style={styles.detailLabel}>Attendance:</Text>
                           <Text style={styles.detailValue}>
                             {Number(b.attendanceRate) || 0}%
                           </Text>
                         </View>
                       </View>
-                    </View>
-                    <View>
-                      <View style={{ flexDirection: "row" }}>
-                        <IconButton
-                          icon="eye"
-                          iconColor={BLUE}
-                          onPress={() => openModalWith(b)}
-                          size={22}
-                        />
-                        <IconButton
-                          icon="pencil"
-                          iconColor="#f39c12"
-                          onPress={() =>
-                            navigation.navigate("AddBeneficiary", {
-                              beneficiary: b,
-                            })
-                          }
-                          size={22}
-                        />
-                        <IconButton
-                          icon="delete"
-                          iconColor="#e74c3c"
-                          onPress={() => handleDelete(b._id)}
-                          size={22}
-                        />
-                      </View>
-                      <Chip
-                        style={styles.typeTag}
-                        textStyle={styles.typeTagText}
+                      {/* Right side: Actions + Type */}
+                      <View
+                        style={{
+                          alignItems: "flex-end",
+                          justifyContent: "space-between",
+                        }}
                       >
-                        {b.type}
-                      </Chip>
+                        <View style={{ flexDirection: "row", marginBottom: 6 }}>
+                          <IconButton
+                            icon="eye"
+                            iconColor={BLUE}
+                            onPress={() => openModalWith(b)}
+                            size={22}
+                          />
+                          <IconButton
+                            icon="pencil"
+                            iconColor="#f39c12"
+                            onPress={() =>
+                              navigation.navigate("AddBeneficiary", {
+                                beneficiary: b,
+                              })
+                            }
+                            size={22}
+                          />
+                          <IconButton
+                            icon="delete"
+                            iconColor="#e74c3c"
+                            onPress={() => handleDelete(b._id)}
+                            size={22}
+                          />
+                        </View>
+                        <Chip
+                          style={styles.typeTag}
+                          textStyle={styles.typeTagText}
+                        >
+                          {b.type}
+                        </Chip>
+                      </View>
                     </View>
-                  </View>
-                </Card.Content>
-              </Card>
-            ))
-          ) : (
-            <Text style={styles.empty}>No beneficiaries found.</Text>
-          )}
-        </ScrollView>
+                  </Card.Content>
+                </Card>
+              ))
+            ) : (
+              <Text style={styles.empty}>No beneficiaries found.</Text>
+            )}
+          </ScrollView>
+        </View>
 
         {/* Pagination */}
         {totalPages > 1 && (
@@ -358,9 +385,7 @@ const BeneficiariesScreen = ({ navigation, route }) => {
                     Close
                   </Button>
                 </View>
-
                 <Divider style={styles.divider} />
-
                 {/* Personal Info Card */}
                 <Card style={styles.modalCard}>
                   <Card.Title
@@ -459,7 +484,6 @@ const BeneficiariesScreen = ({ navigation, route }) => {
                               {meta.remainingDays}
                             </Text>
                           </View>
-
                           {/* Progress */}
                           <View style={{ marginTop: 12 }}>
                             <Text
@@ -561,36 +585,66 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#555",
   },
+  // New styles for the ScrollView container
+  listContainerWrapper: {
+    maxHeight: screenHeight * 0.45, // Set the maximum height
+    flexShrink: 1, // Allows the container to shrink if needed
+    marginBottom: 16,
+  },
   listContainer: {
-    flex: 1,
+    flexGrow: 0, // Crucial to prevent ScrollView from taking all vertical space
   },
-  card: {
-    marginBottom: 12,
-    borderRadius: 12,
-    elevation: 3,
-    backgroundColor: "#fff",
+  listContentContainer: {
+    paddingBottom: 16, // Add padding at the bottom for better scroll feel
   },
+
   rowBetween: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
+
+  card: {
+    marginBottom: 12,
+    borderRadius: 12,
+    elevation: 2,
+    backgroundColor: "#fff",
+    paddingVertical: 1,
+  },
   name: {
     fontFamily: "Poppins_600SemiBold",
     fontSize: 16,
-    color: "#34495e",
+    color: "#2c3e50",
+  },
+  detailRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  detailLabel: {
+    fontFamily: "Poppins_500Medium",
+    fontSize: 13,
+    color: "#7f8c8d",
+  },
+  detailValue: {
+    fontFamily: "Poppins_400Regular",
+    fontSize: 13,
+    color: "#2c3e50",
+    textAlign: "right",
   },
   typeTag: {
-    backgroundColor: "#e0e0e0",
+    backgroundColor: "#ecf0f1",
     alignSelf: "flex-start",
-    marginTop: 4,
-    marginLeft: 20,
+    marginTop: 6,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    marginBlockEnd: 0,
   },
   typeTagText: {
-    fontFamily: "Poppins_400Regular",
+    fontFamily: "Poppins_500Medium",
     fontSize: 12,
-    color: "#333",
+    color: "#34495e",
   },
+
   empty: {
     textAlign: "center",
     marginTop: 40,

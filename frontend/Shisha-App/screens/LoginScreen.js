@@ -117,32 +117,22 @@ const LoginScreen = ({ navigation }) => {
           <View style={styles.footer}>
             <Text
               style={styles.footerLink}
-              onPress={() => Alert.alert("About Us", "About Us page")}
+              onPress={() => navigation.navigate("AboutUs")}
             >
               About Us
             </Text>
             <Text style={styles.footerSeparator}> | </Text>
-            <Text
-              style={styles.footerLink}
-              onPress={() =>
-                Alert.alert("Privacy Policy", "Privacy Policy page")
-              }
-            >
-              Privacy Policy
-            </Text>
             <Text style={styles.footerSeparator}> | </Text>
             <Text
               style={styles.footerLink}
-              onPress={() =>
-                Alert.alert("Terms of Service", "Terms of Service page")
-              }
+              onPress={() => navigation.navigate("TermsOfServiceScreen")}
             >
               Terms of Service
             </Text>
             <Text style={styles.footerSeparator}> | </Text>
             <Text
               style={styles.footerLink}
-              onPress={() => Alert.alert("Contact Us", "Contact Us page")}
+              onPress={() => navigation.navigate("ContactUsScreen")}
             >
               Contact Us
             </Text>

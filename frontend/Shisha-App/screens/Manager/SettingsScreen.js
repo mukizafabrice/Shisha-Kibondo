@@ -172,9 +172,7 @@ const SettingsScreen = ({ navigation }) => {
             <Text style={styles.sectionTitle}>Account</Text>
             <Button
               mode="outlined"
-              onPress={() =>
-                Alert.alert("Help", "Contact support at support@shishaapp.com")
-              }
+              onPress={() => navigation.navigate("HelpSupport")}
               style={styles.actionButton}
               textColor="#007AFF"
               icon="help-circle"
@@ -183,12 +181,7 @@ const SettingsScreen = ({ navigation }) => {
             </Button>
             <Button
               mode="outlined"
-              onPress={() =>
-                Alert.alert(
-                  "Privacy",
-                  "Privacy policy information would be displayed here."
-                )
-              }
+              onPress={() => navigation.navigate("PrivacyPolicy")}
               style={styles.actionButton}
               textColor="#007AFF"
               icon="shield-account"

@@ -10,6 +10,10 @@ import { useAuth } from "../context/AuthContext";
 import LoginScreen from "../screens/LoginScreen";
 import ResetPasswordScreen from "../screens/ResetPasswordScreen";
 import ForgotPasswordScreen from "../screens/ForgotPasswordScreen";
+import AboutUs from "../screens/AboutUsScreen";
+import ContactUsScreen from "../screens/ContactUsScreen";
+import TermsOfServiceScreen from "../screens/TermsOfServiceScreen";
+
 // Manager Screens
 import ManagerHomeScreen from "../screens/Manager/HomeScreen";
 import ManagerSettingsScreen from "../screens/Manager/SettingsScreen";
@@ -25,6 +29,8 @@ import ProductsScreen from "../screens/Manager/ProductsScreen";
 import ProfileScreen from "../screens/Manager/ProfileScreen";
 import AddProductScreen from "../screens/Manager/AddProductScreen";
 import StockTransactionsScreen from "../screens/Manager/StockTransactionsScreen";
+import HelpSupportScreen from "../screens/Manager/HelpSupportScreen";
+import PrivacyPolicyScreen from "../screens/Manager/PrivacyPolicyScreen";
 // Health Worker Screens
 import HealthWorkerHomeScreen from "../screens/Health_worker/HomeScreen";
 import HealthWorkerSettingsScreen from "../screens/Health_worker/SettingsScreen";
@@ -34,7 +40,8 @@ import StockScreen from "../screens/Health_worker/StockManagementScreen";
 import HealthBeneficiariesScreen from "../screens/Health_worker/BeneficiariesScreen";
 import HealthProductsScreen from "../screens/Health_worker/ProductsScreen";
 import HealthProfileScreen from "../screens/Health_worker/ProfileScreen";
-
+import HelpSupportHealthScreen from "../screens/Manager/HelpSupportScreen";
+import PrivacyPolicyHealthScreen from "../screens/Manager/PrivacyPolicyScreen";
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
@@ -271,6 +278,36 @@ const AppNavigator = () => {
             component={ResetPasswordScreen}
             options={{ headerShown: false }}
           />
+          <Stack.Screen
+            name="AboutUs"
+            component={AboutUs}
+            options={{
+              title: "About Us",
+              headerStyle: { backgroundColor: "#007AFF" },
+              headerTintColor: "#fff",
+              headerTitleStyle: { fontWeight: "bold" },
+            }}
+          />
+          <Stack.Screen
+            name="ContactUsScreen"
+            component={ContactUsScreen}
+            options={{
+              title: "Contact us",
+              headerStyle: { backgroundColor: "#007AFF" },
+              headerTintColor: "#fff",
+              headerTitleStyle: { fontWeight: "bold" },
+            }}
+          />
+          <Stack.Screen
+            name="TermsOfServiceScreen"
+            component={TermsOfServiceScreen}
+            options={{
+              title: "Terms Of Service",
+              headerStyle: { backgroundColor: "#007AFF" },
+              headerTintColor: "#fff",
+              headerTitleStyle: { fontWeight: "bold" },
+            }}
+          />
         </>
       ) : user.role === "manager" ? (
         <>
@@ -363,6 +400,26 @@ const AppNavigator = () => {
               headerTitleStyle: { fontWeight: "bold" },
             }}
           />
+          <Stack.Screen
+            name="HelpSupport"
+            component={HelpSupportScreen}
+            options={{
+              title: "Help & Support",
+              headerStyle: { backgroundColor: "#007AFF" },
+              headerTintColor: "#fff",
+              headerTitleStyle: { fontWeight: "bold" },
+            }}
+          />
+          <Stack.Screen
+            name="PrivacyPolicy"
+            component={PrivacyPolicyScreen}
+            options={{
+              title: "Privacy Policy",
+              headerStyle: { backgroundColor: "#007AFF" },
+              headerTintColor: "#fff",
+              headerTitleStyle: { fontWeight: "bold" },
+            }}
+          />
         </>
       ) : (
         <>
@@ -396,6 +453,26 @@ const AppNavigator = () => {
             component={HealthProfileScreen}
             options={{
               title: "Edit Profile",
+              headerStyle: { backgroundColor: "#007AFF" },
+              headerTintColor: "#fff",
+              headerTitleStyle: { fontWeight: "bold" },
+            }}
+          />
+          <Stack.Screen
+            name="HelpHealthSupport"
+            component={HelpSupportHealthScreen}
+            options={{
+              title: "Help & Support",
+              headerStyle: { backgroundColor: "#007AFF" },
+              headerTintColor: "#fff",
+              headerTitleStyle: { fontWeight: "bold" },
+            }}
+          />
+          <Stack.Screen
+            name="PrivacyHealthPolicy"
+            component={PrivacyPolicyHealthScreen}
+            options={{
+              title: "Privacy Policy",
               headerStyle: { backgroundColor: "#007AFF" },
               headerTintColor: "#fff",
               headerTitleStyle: { fontWeight: "bold" },

@@ -178,7 +178,10 @@ const HealthWorkerHomeScreen = ({ navigation }) => {
         <View style={styles.header}>
           <View>
             <Text style={styles.greetingText}>
-              Hello, {user?.name || "Community Health Worker"}
+              Hello,
+              <Text style={styles.greetingHighlight}>
+                {user?.name || "Community Health Worker"}
+              </Text>
             </Text>
             <Text style={styles.captionText}>
               Welcome back! Here’s your latest dashboard overview.
@@ -357,6 +360,7 @@ const styles = StyleSheet.create({
     fontFamily: "Poppins_600SemiBold",
     color: "#1E293B",
   },
+  greetingHighlight: { fontWeight: "bold", color: "blue" },
   captionText: {
     fontSize: 14,
     fontFamily: "Poppins_400Regular",
