@@ -272,34 +272,33 @@ const HealthWorkerHomeScreen = ({ navigation }) => {
             )}
           </Card.Content>
         </Card>
-        {/* Quick Actions */}{" "}
+        {/* Quick Actions */}
         <Card style={styles.actionsCard}>
-          {" "}
+
           <Card.Content>
-            {" "}
-            <Title style={styles.cardTitle}>⚡ Quick Actions</Title>{" "}
+            
+            <Title style={styles.cardTitle}>⚡ Quick Actions</Title>
             <View style={styles.actionsRow}>
-              {" "}
+          
               <Button
                 mode="contained"
                 icon="eye"
                 style={styles.actionButton}
                 onPress={() => navigation.navigate("health-Beneficiaries")}
               >
-                {" "}
-                Beneficiaries{" "}
-              </Button>{" "}
+                Beneficiaries
+              </Button>
               <Button
                 mode="contained"
                 icon="send"
                 style={styles.actionButton}
                 onPress={() => navigation.navigate("Reports")}
               >
-                {" "}
-                New Distribution{" "}
-              </Button>{" "}
-            </View>{" "}
-          </Card.Content>{" "}
+                
+                New Distribution
+              </Button>
+            </View>
+          </Card.Content>
         </Card>
         {/* Recent Activity */}
         <Card style={styles.visualizationCard}>

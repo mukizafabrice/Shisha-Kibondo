@@ -18,7 +18,7 @@ const ContactUsScreen = () => {
         <Button
           mode="contained"
           style={styles.button}
-          onPress={() => Linking.openURL("mailto:support@yourapp.com")}
+          onPress={() => Linking.openURL("mailto:support@shishaApp.com")}
         >
           Email Us
         </Button>
