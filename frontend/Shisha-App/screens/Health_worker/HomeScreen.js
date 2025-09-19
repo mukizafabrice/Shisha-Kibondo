@@ -1,426 +1,668 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
-  ScrollView,
+  Alert,
   StyleSheet,
   ActivityIndicator,
-  Alert,
+  KeyboardAvoidingView,
+  ScrollView,
+  Platform,
 } from "react-native";
 import {
-  Surface,
-  Card,
+  TextInput,
   Button,
+  Chip,
+  Card,
+  Surface,
   IconButton,
-  Title,
-  Caption,
+  Portal,
+  Modal,
+  Divider,
   ProgressBar,
-  Avatar,
 } from "react-native-paper";
 import {
   useFonts,
   Poppins_400Regular,
+  Poppins_500Medium,
   Poppins_600SemiBold,
 } from "@expo-google-fonts/poppins";
-import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context/AuthContext";
-import { getAllStocks } from "../../services/stockService";
 import BeneficiaryService from "../../services/beneficiaryService";
-import { getAllProducts } from "../../services/ProductService";
-import { getAllDistributions } from "../../services/distributionService";
 
-const HealthWorkerHomeScreen = ({ navigation }) => {
-  const { user, logout } = useAuth();
+const BLUE = "#007AFF";
+const ITEMS_PER_PAGE = 8;
+const PROGRAM_DAYS = 180; // 6 months
 
-  // --- All hooks at the top ---
-  const [stats, setStats] = useState({
-    stocks: 0,
-    products: 0,
-    beneficiaries: 0,
-    distributions: 0,
-  });
-  const [stockBreakdown, setStockBreakdown] = useState([]);
-  const [recentActivity, setRecentActivity] = useState([]);
-  const [loading, setLoading] = useState(true);
-
+const BeneficiariesScreen = ({ navigation, route }) => {
+  const { logout } = useAuth();
   const [fontsLoaded] = useFonts({
     Poppins_400Regular,
+    Poppins_500Medium,
     Poppins_600SemiBold,
   });
 
-  // --- Fetch dashboard data ---
+  const [beneficiaries, setBeneficiaries] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState("All");
+  const [selectedType, setSelectedType] = useState("All");
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const [selectedBeneficiary, setSelectedBeneficiary] = useState(null);
+  const [modalVisible, setModalVisible] = useState(false);
+  const { user } = useAuth();
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [stocksData, productsData, beneficiariesData, distributionsData] =
-          await Promise.all([
-            getAllStocks(),
-            getAllProducts(),
-            BeneficiaryService.getBeneficiary(user?.id),
-            getAllDistributions(),
-          ]);
+    fetchBeneficiaries();
+  }, []);
 
-        const totalStocks = stocksData.reduce(
-          (sum, item) => sum + item.totalStock,
-          0
-        );
-        const totalProducts = productsData.length;
-        const totalBeneficiaries = beneficiariesData.length;
-        const totalDistributions = distributionsData.length;
+  const fetchBeneficiaries = async () => {
+    setLoading(true);
+    try {
+      const userId = user?.id;
+      console.log("Fetching beneficiaries for userId:", userId);
+      const data = await BeneficiaryService.getBeneficiary(userId);
+      setBeneficiaries(data || []);
+    } catch (err) {
+      console.error("fetchBeneficiaries:", err);
+      Alert.alert("Error", "Failed to fetch beneficiaries.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-        setStats({
-          stocks: totalStocks,
-          products: totalProducts,
-          beneficiaries: totalBeneficiaries,
-          distributions: totalDistributions,
-        });
+  const filteredBeneficiaries = useMemo(() => {
+    let list = beneficiaries;
+    if (selectedStatus !== "All")
+      list = list.filter((b) => b.status === selectedStatus);
+    if (selectedType !== "All")
+      list = list.filter((b) => b.type === selectedType);
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter(
+        (b) =>
+          `${b.firstName} ${b.lastName}`.toLowerCase().includes(q) ||
+          (b.nationalId || "").toLowerCase().includes(q) ||
+          (b.village || "").toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [beneficiaries, selectedStatus, selectedType, searchQuery]);
 
-        const totalStockSum = totalStocks;
-        const breakdown = productsData.map((product) => {
-          const productStocks = stocksData.filter(
-            (stock) => stock.productId._id === product._id
-          );
-          const totalProductStock = productStocks.reduce(
-            (sum, item) => sum + item.totalStock,
-            0
-          );
-          return {
-            name: product.name,
-            value: totalProductStock,
-            percentage:
-              totalStockSum > 0 ? totalProductStock / totalStockSum : 0,
-          };
-        });
-        setStockBreakdown(breakdown);
-      } catch (error) {
-        console.error("Failed to fetch dashboard data:", error);
-        Alert.alert(
-          "Error",
-          "Failed to load dashboard data. Please try again."
-        );
-      } finally {
-        setLoading(false);
-      }
+  const paginatedBeneficiaries = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredBeneficiaries.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredBeneficiaries, currentPage]);
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredBeneficiaries.length / ITEMS_PER_PAGE)
+  );
+
+  const calculateProgramMeta = (b) => {
+    const created = b?.createdAt ? new Date(b.createdAt) : new Date();
+    const endDate = new Date(created);
+    endDate.setDate(created.getDate() + PROGRAM_DAYS);
+
+    const totalDays = Number(b?.totalProgramDays) || PROGRAM_DAYS;
+    const completed = Number(b?.completedDays) || 0;
+    const remainingDays = Math.max(totalDays - completed, 0);
+    const attendance =
+      totalDays > 0 ? Math.round((completed / totalDays) * 100) : 0;
+    return {
+      createdAt: created,
+      endDate,
+      totalDays,
+      completed,
+      remainingDays,
+      attendance,
+      completionPercent: Math.min(1, completed / totalDays),
     };
+  };
 
-    fetchData();
-  }, [user?.id]);
+  const formatDate = (d) => (d ? new Date(d).toLocaleDateString() : "N/A");
 
-  // --- Fetch recent activity ---
-  useEffect(() => {
-    const fetchRecentActivity = async () => {
-      try {
-        const [stocksData, productsData, beneficiariesData, distributionsData] =
-          await Promise.all([
-            getAllStocks(),
-            getAllProducts(),
-            BeneficiaryService.getBeneficiary(user?.id),
-            getAllDistributions(),
-          ]);
+  const openModalWith = (b) => {
+    setSelectedBeneficiary(b);
+    setModalVisible(true);
+  };
 
-        const activities = [];
+  const handleDelete = async (id) => {
+    Alert.alert("Delete Beneficiary", "Are you sure?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await BeneficiaryService.deleteBeneficiary(id);
+            setBeneficiaries((prev) => prev.filter((p) => p._id !== id));
+            Alert.alert("Deleted", "Beneficiary removed.");
+          } catch (err) {
+            console.error("delete beneficiary:", err);
+            Alert.alert("Error", err?.message || "Delete failed.");
+          }
+        },
+      },
+    ]);
+  };
 
-        beneficiariesData.slice(-3).forEach((b) =>
-          activities.push({
-            type: "beneficiary",
-            message: `New beneficiary registered: ${b.name || "Unnamed"}`,
-            createdAt: new Date(b.createdAt),
-          })
-        );
-
-        productsData.slice(-3).forEach((p) =>
-          activities.push({
-            type: "product",
-            message: `Product updated: ${p.name}`,
-            createdAt: new Date(p.createdAt),
-          })
-        );
-
-        stocksData.slice(-3).forEach((s) =>
-          activities.push({
-            type: "stock",
-            message: `Stock update: ${s.productId?.name || "Unknown Product"}`,
-            createdAt: new Date(s.createdAt),
-          })
-        );
-
-        distributionsData.slice(-3).forEach((d) =>
-          activities.push({
-            type: "distribution",
-            message: `Distributed supplements to beneficiaries`,
-            createdAt: new Date(d.createdAt),
-          })
-        );
-
-        activities.sort((a, b) => b.createdAt - a.createdAt);
-        setRecentActivity(activities.slice(0, 5));
-      } catch (error) {
-        console.error("Error fetching recent activity:", error);
-      }
-    };
-
-    fetchRecentActivity();
-  }, [user?.id]);
-
-  // --- Show loading until data & fonts are ready ---
   if (loading || !fontsLoaded) {
     return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color={BLUE} />
       </View>
     );
   }
 
   return (
-    <Surface style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
+      <Surface style={styles.container}>
         {/* Header */}
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.greetingText}>
-              Hello,
-              <Text style={styles.greetingHighlight}>
-                {user?.name || "Community Health Worker"}
-              </Text>
-            </Text>
-            <Text style={styles.captionText}>
-              Welcome back! Here’s your latest dashboard overview.
-            </Text>
+        <View style={styles.topRow}>
+          <Button
+            icon="refresh"
+            mode="outlined"
+            onPress={fetchBeneficiaries}
+            style={styles.refreshButton}
+            textColor={BLUE}
+            labelStyle={styles.buttonLabel}
+          >
+            Refresh
+          </Button>
+        </View>
+
+        {/* Search */}
+        <TextInput
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          mode="outlined"
+          placeholder="Search beneficiaries..."
+          left={<TextInput.Icon icon="magnify" />}
+          style={styles.searchInput}
+          outlineStyle={styles.textInputOutline}
+          theme={{ colors: { primary: BLUE } }}
+        />
+
+        {/* Filters */}
+        <View style={styles.filterSection}>
+          <View style={styles.filterBlock}>
+            <Text style={styles.filterLabel}>Status</Text>
+            <View style={styles.chipsRow}>
+              {["All", "active", "inactive"].map((s) => (
+                <Chip
+                  key={s}
+                  selected={selectedStatus === s}
+                  onPress={() => setSelectedStatus(s)}
+                  style={[
+                    styles.chip,
+                    selectedStatus === s && styles.selectedChip,
+                  ]}
+                  textStyle={styles.chipText}
+                  selectedColor={BLUE}
+                  showSelectedCheck={false}
+                >
+                  {s}
+                </Chip>
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.filterBlock}>
+            <Text style={styles.filterLabel}>Type</Text>
+            <View style={styles.chipsRow}>
+              {["All", "pregnant", "breastfeeding", "child"].map((t) => (
+                <Chip
+                  key={t}
+                  selected={selectedType === t}
+                  onPress={() => setSelectedType(t)}
+                  style={[
+                    styles.chip,
+                    selectedType === t && styles.selectedChip,
+                  ]}
+                  textStyle={styles.chipText}
+                  selectedColor={BLUE}
+                  showSelectedCheck={false}
+                >
+                  {t}
+                </Chip>
+              ))}
+            </View>
           </View>
         </View>
-        {/* Stats */}
-        <View style={styles.statsContainer}>
-          <Card
-            style={styles.statCard}
-            onPress={() => navigation.navigate("Stock")}
-          >
-            <Card.Content style={styles.statCardContent}>
-              <Ionicons name="cube-outline" size={28} color="#2563EB" />
-              <View style={styles.statInfo}>
-                <Title>{stats.stocks}</Title>
-                <Caption>Total Stock</Caption>
-              </View>
-            </Card.Content>
-          </Card>
 
-          <Card
-            style={styles.statCard}
-            onPress={() => navigation.navigate("health-ProductsScreen")}
-          >
-            <Card.Content style={styles.statCardContent}>
-              <Ionicons name="pricetags-outline" size={28} color="#DC2626" />
-              <View style={styles.statInfo}>
-                <Title>{stats.products}</Title>
-                <Caption>Products</Caption>
-              </View>
-            </Card.Content>
-          </Card>
-
-          <Card
-            style={styles.statCard}
-            onPress={() => navigation.navigate("health-Beneficiaries")}
-          >
-            <Card.Content style={styles.statCardContent}>
-              <Ionicons name="people-outline" size={28} color="#CA8A04" />
-              <View style={styles.statInfo}>
-                <Title>{stats.beneficiaries}</Title>
-                <Caption>Beneficiaries</Caption>
-              </View>
-            </Card.Content>
-          </Card>
-
-          <Card
-            style={styles.statCard}
-            onPress={() => navigation.navigate("Reports")}
-          >
-            <Card.Content style={styles.statCardContent}>
-              <Ionicons name="send-outline" size={28} color="#16A34A" />
-              <View style={styles.statInfo}>
-                <Title>{stats.distributions}</Title>
-                <Caption>Distributions</Caption>
-              </View>
-            </Card.Content>
-          </Card>
-        </View>
-        {/* Stock Breakdown */}
-        <Card style={styles.visualizationCard}>
-          <Card.Content>
-            <Title style={styles.cardTitle}>📊 Stock Breakdown</Title>
-            {stockBreakdown.length > 0 ? (
-              stockBreakdown.map((item, index) => (
-                <View key={index} style={styles.progressItem}>
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      justifyContent: "space-between",
-                    }}
-                  >
-                    <Text style={styles.productName}>{item.name}</Text>
-                    <Text style={styles.progressText}>
-                      {item.value} ({Math.round(item.percentage * 100)}%)
-                    </Text>
+        {/* Beneficiary List */}
+        <ScrollView style={styles.listContainer}>
+          {paginatedBeneficiaries.length > 0 ? (
+            paginatedBeneficiaries.map((b) => (
+              <Card key={b._id} style={styles.card}>
+                <Card.Content>
+                  <View style={styles.rowBetween}>
+                    <View>
+                      <Text style={styles.name}>
+                        {b.firstName} {b.lastName}
+                      </Text>
+                      <View style={styles.detailRow}>
+                        <Text style={styles.detailLabel}>Attendance Rate:</Text>
+                        <Text style={styles.detailValue}>
+                          {Number(b.attendanceRate) || 0}%
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={{ flexDirection: "column" }}>
+                      <IconButton
+                        icon="eye"
+                        iconColor={BLUE}
+                        onPress={() => openModalWith(b)}
+                        size={22}
+                      />
+                      <Chip
+                        style={styles.typeTag}
+                        textStyle={styles.typeTagText}
+                      >
+                        {b.type}
+                      </Chip>
+                    </View>
                   </View>
-                  <ProgressBar
-                    progress={item.percentage}
-                    color="#2563EB"
-                    style={styles.progressBar}
-                  />
-                </View>
-              ))
-            ) : (
-              <Text style={styles.emptyText}>No stock data to display.</Text>
-            )}
-          </Card.Content>
-        </Card>
-        {/* Quick Actions */}
-        <Card style={styles.actionsCard}>
+                </Card.Content>
+              </Card>
+            ))
+          ) : (
+            <Text style={styles.empty}>No beneficiaries found.</Text>
+          )}
+        </ScrollView>
 
-          <Card.Content>
-            
-            <Title style={styles.cardTitle}>⚡ Quick Actions</Title>
-            <View style={styles.actionsRow}>
-          
-              <Button
-                mode="contained"
-                icon="eye"
-                style={styles.actionButton}
-                onPress={() => navigation.navigate("health-Beneficiaries")}
-              >
-                Beneficiaries
-              </Button>
-              <Button
-                mode="contained"
-                icon="send"
-                style={styles.actionButton}
-                onPress={() => navigation.navigate("Reports")}
-              >
-                
-                New Distribution
-              </Button>
-            </View>
-          </Card.Content>
-        </Card>
-        {/* Recent Activity */}
-        <Card style={styles.visualizationCard}>
-          <Card.Content>
-            <Title style={styles.cardTitle}>📝 Recent Activity</Title>
-            {recentActivity.length === 0 ? (
-              <Text style={styles.emptyText}>No recent activity</Text>
-            ) : (
-              recentActivity.map((act, index) => (
-                <View
-                  key={index}
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    marginBottom: 8,
-                  }}
-                >
-                  {act.type === "beneficiary" && (
-                    <Ionicons name="person-add" size={20} color="#F59E0B" />
-                  )}
-                  {act.type === "product" && (
-                    <Ionicons name="cube" size={20} color="#2563EB" />
-                  )}
-                  {act.type === "stock" && (
-                    <Ionicons name="archive" size={20} color="#10B981" />
-                  )}
-                  {act.type === "distribution" && (
-                    <Ionicons name="send" size={20} color="#16A34A" />
-                  )}
-                  <Text
-                    style={styles.activityText}
-                    numberOfLines={1}
-                    ellipsizeMode="tail"
-                  >
-                    {act.message}
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <View style={styles.pagination}>
+            <Button
+              mode="contained"
+              onPress={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              buttonColor={BLUE}
+              labelStyle={styles.buttonLabel}
+            >
+              Prev
+            </Button>
+            <Text style={styles.pageInfo}>
+              Page {currentPage} of {totalPages}
+            </Text>
+            <Button
+              mode="contained"
+              onPress={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              buttonColor={BLUE}
+              labelStyle={styles.buttonLabel}
+            >
+              Next
+            </Button>
+          </View>
+        )}
+
+        {/* Modal */}
+        <Portal>
+          <Modal
+            visible={modalVisible}
+            onDismiss={() => setModalVisible(false)}
+            contentContainerStyle={styles.modalContainer}
+          >
+            {selectedBeneficiary && (
+              <ScrollView style={styles.modalScroll}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>
+                    {selectedBeneficiary.firstName}{" "}
+                    {selectedBeneficiary.lastName}
                   </Text>
+                  <Button
+                    mode="outlined"
+                    onPress={() => setModalVisible(false)}
+                    textColor={BLUE}
+                    style={{ height: 36 }}
+                    labelStyle={styles.buttonLabel}
+                  >
+                    Close
+                  </Button>
                 </View>
-              ))
+
+                <Divider style={styles.divider} />
+
+                {/* Personal Info Card */}
+                <Card style={styles.modalCard}>
+                  <Card.Title
+                    title="Personal Info"
+                    titleStyle={styles.cardTitle}
+                  />
+                  <Card.Content>
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>National ID:</Text>
+                      <Text style={styles.detailValue}>
+                        {selectedBeneficiary.nationalId || "N/A"}
+                      </Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Village:</Text>
+                      <Text style={styles.detailValue}>
+                        {selectedBeneficiary.village || "N/A"}
+                      </Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>
+                        Assigned Umunyabuzima:
+                      </Text>
+                      <Text style={styles.detailValue}>
+                        {selectedBeneficiary.userId?.name || "N/A"}
+                      </Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Type:</Text>
+                      <Text style={styles.detailValue}>
+                        {selectedBeneficiary.type}
+                      </Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Status:</Text>
+                      <Text style={styles.detailValue}>
+                        {selectedBeneficiary.status}
+                      </Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Admission Status:</Text>
+                      <Text
+                        style={[
+                          styles.detailValue,
+                          {
+                            color:
+                              selectedBeneficiary.admissionStatus === "pending"
+                                ? "orange"
+                                : selectedBeneficiary.admissionStatus ===
+                                  "admitted"
+                                ? "green"
+                                : "red",
+                          },
+                        ]}
+                      >
+                        {selectedBeneficiary.admissionStatus}
+                      </Text>
+                    </View>
+                  </Card.Content>
+                </Card>
+
+                {/* Program Info Card */}
+                <Card style={styles.modalCard}>
+                  <Card.Title
+                    title="Program Details"
+                    titleStyle={styles.cardTitle}
+                  />
+                  <Card.Content>
+                    {(() => {
+                      const meta = calculateProgramMeta(selectedBeneficiary);
+                      return (
+                        <>
+                          <View style={styles.detailRow}>
+                            <Text style={styles.detailLabel}>Total Days:</Text>
+                            <Text style={styles.detailValue}>
+                              {Number(selectedBeneficiary.totalProgramDays) ||
+                                PROGRAM_DAYS}
+                            </Text>
+                          </View>
+                          <View style={styles.detailRow}>
+                            <Text style={styles.detailLabel}>
+                              Completed Days:
+                            </Text>
+                            <Text style={styles.detailValue}>
+                              {Number(selectedBeneficiary.completedDays) || 0}
+                            </Text>
+                          </View>
+                          <View style={styles.detailRow}>
+                            <Text style={styles.detailLabel}>
+                              Attendance Rate:
+                            </Text>
+                            <Text style={styles.detailValue}>
+                              {Number(selectedBeneficiary.attendanceRate) || 0}%
+                            </Text>
+                          </View>
+                          <View style={styles.detailRow}>
+                            <Text style={styles.detailLabel}>
+                              Registered On:
+                            </Text>
+                            <Text style={styles.detailValue}>
+                              {formatDate(selectedBeneficiary.createdAt)}
+                            </Text>
+                          </View>
+                          <View style={styles.detailRow}>
+                            <Text style={styles.detailLabel}>End Date:</Text>
+                            <Text style={styles.detailValue}>
+                              {formatDate(meta.endDate)}
+                            </Text>
+                          </View>
+                          <View style={styles.detailRow}>
+                            <Text style={styles.detailLabel}>
+                              Remaining Days:
+                            </Text>
+                            <Text style={styles.detailValue}>
+                              {meta.remainingDays}
+                            </Text>
+                          </View>
+
+                          {/* Progress */}
+                          <View style={{ marginTop: 12 }}>
+                            <Text
+                              style={[styles.detailLabel, { marginBottom: 4 }]}
+                            >
+                              Program Completion
+                            </Text>
+                            <ProgressBar
+                              progress={meta.completionPercent}
+                              color={BLUE}
+                              style={styles.modalProgress}
+                            />
+                            <Text style={styles.progressText}>
+                              {Math.round(meta.completionPercent * 100)}%
+                              completed
+                            </Text>
+                          </View>
+                        </>
+                      );
+                    })()}
+                  </Card.Content>
+                </Card>
+              </ScrollView>
             )}
-          </Card.Content>
-        </Card>
-      </ScrollView>
-    </Surface>
+          </Modal>
+        </Portal>
+      </Surface>
+    </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: "#F9FAFB" },
-  centerContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
-  header: {
+  container: {
+    flex: 1,
+    padding: 16,
+    backgroundColor: "#f8f9fa",
+  },
+  topRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 16,
+  },
+  addButton: {
+    borderRadius: 8,
+    flex: 1,
+    marginRight: 8,
+    height: 48,
+    justifyContent: "center",
+  },
+  refreshButton: {
+    borderRadius: 8,
+    width: 110,
+    height: 48,
+    justifyContent: "center",
+  },
+  buttonLabel: {
+    fontFamily: "Poppins_600SemiBold",
+    fontSize: 14,
+  },
+  searchInput: {
+    marginBottom: 16,
+    backgroundColor: "#fff",
+  },
+  textInputOutline: {
+    borderRadius: 12,
+  },
+  filterSection: {
+    marginBottom: 16,
+  },
+  filterBlock: {
+    marginBottom: 12,
+  },
+  filterLabel: {
+    fontFamily: "Poppins_600SemiBold",
+    fontSize: 13,
+    color: "#34495e",
+    marginBottom: 6,
+  },
+  chipsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8, // Use gap for modern spacing
+  },
+  chip: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+    backgroundColor: "#fff",
+    paddingHorizontal: 4,
+    minHeight: 36,
+    justifyContent: "center",
+  },
+  selectedChip: {
+    backgroundColor: BLUE,
+    borderColor: BLUE,
+  },
+  chipText: {
+    fontFamily: "Poppins_500Medium",
+    fontSize: 13,
+    color: "#555",
+  },
+  listContainer: {
+    flex: 1,
+  },
+  card: {
+    marginBottom: 12,
+    borderRadius: 12,
+    elevation: 3,
+    backgroundColor: "#fff",
+  },
+  rowBetween: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 25,
   },
-  greetingText: {
-    fontSize: 22,
+  name: {
     fontFamily: "Poppins_600SemiBold",
-    color: "#1E293B",
+    fontSize: 16,
+    color: "#34495e",
   },
-  greetingHighlight: { fontWeight: "bold", color: "blue" },
-  captionText: {
-    fontSize: 14,
+  typeTag: {
+    backgroundColor: "#e0e0e0",
+    alignSelf: "flex-start",
+    marginTop: 4,
+  },
+  typeTagText: {
     fontFamily: "Poppins_400Regular",
-    color: "#64748B",
+    fontSize: 12,
+    color: "#333",
   },
-  statsContainer: {
+  empty: {
+    textAlign: "center",
+    marginTop: 40,
+    fontStyle: "italic",
+    color: "#7f8c8d",
+    fontFamily: "Poppins_400Regular",
+  },
+  pagination: {
     flexDirection: "row",
-    flexWrap: "wrap",
+    alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 25,
+    marginTop: 16,
   },
-  statCard: {
-    width: "48%",
-    borderRadius: 16,
-    marginBottom: 12,
-    backgroundColor: "#fff",
-    elevation: 4,
-  },
-  statCardContent: { flexDirection: "row", alignItems: "center", padding: 12 },
-  statInfo: { marginLeft: 12 },
-  progressItem: { marginBottom: 15 },
-  productName: {
-    fontFamily: "Poppins_600SemiBold",
+  pageInfo: {
+    fontFamily: "Poppins_500Medium",
     fontSize: 14,
-    color: "#111827",
+    color: "#555",
   },
-  progressBar: { height: 10, borderRadius: 5 },
-  progressText: {
-    fontFamily: "Poppins_400Regular",
-    fontSize: 13,
-    color: "#475569",
-  },
-  visualizationCard: {
-    borderRadius: 16,
+  modalContainer: {
     backgroundColor: "#fff",
-    elevation: 3,
-    padding: 15,
-    marginBottom: 20,
+    margin: 20,
+    borderRadius: 16,
+    padding: 20,
+    maxHeight: "85%",
   },
-  emptyText: { textAlign: "center", color: "#9CA3AF", paddingVertical: 20 },
-  activityText: {
-    marginLeft: 8,
-    fontFamily: "Poppins_400Regular",
+  modalScroll: {
+    paddingHorizontal: 6,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontFamily: "Poppins_600SemiBold",
+    fontSize: 22,
+    color: BLUE,
+  },
+  divider: {
+    marginVertical: 12,
+  },
+  modalCard: {
+    borderRadius: 12,
+    marginVertical: 8,
+    elevation: 2,
+  },
+  cardTitle: {
+    fontFamily: "Poppins_600SemiBold",
+    fontSize: 16,
+    color: "#34495e",
+  },
+  detailRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 6,
+  },
+  detailLabel: {
+    fontFamily: "Poppins_600SemiBold",
     fontSize: 13,
-    color: "#374151",
+    color: "#34495e",
+  },
+  detailValue: {
+    fontFamily: "Poppins_400Regular",
+    fontSize: 14,
+    color: "#333",
     flexShrink: 1,
+    textAlign: "right",
   },
-  actionsCard: {
-    borderRadius: 16,
-    backgroundColor: "#fff",
-    elevation: 3,
-    padding: 15,
-    marginBottom: 20,
+  modalProgress: {
+    height: 10,
+    borderRadius: 6,
+    marginTop: 6,
   },
-  actionsRow: { flexDirection: "row", justifyContent: "space-between" },
-  actionButton: {
+  progressText: {
+    fontSize: 12,
+    color: "#6b7280",
+    marginTop: 4,
+    textAlign: "right",
+  },
+  center: {
     flex: 1,
-    marginHorizontal: 5,
-    borderRadius: 10,
-    backgroundColor: "#2563EB",
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f8f9fa",
   },
 });
 
-export default HealthWorkerHomeScreen;
+export default BeneficiariesScreen;

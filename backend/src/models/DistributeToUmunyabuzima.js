@@ -2,10 +2,10 @@ import mongoose from "mongoose";
 
 const distributeToUmunyabuzimaSchema = new mongoose.Schema(
   {
-    userId: {
+    beneficiaryId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: [true, "Please provide a user ID"],
+      ref: "Beneficiaries",
+      required: [true, "Please provide a beneficiary ID"],
     },
     productId: {
       type: mongoose.Schema.Types.ObjectId,

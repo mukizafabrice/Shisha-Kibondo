@@ -3,35 +3,41 @@ import ProgramDay from "../models/ProgramDay.js";
 import mongoose from "mongoose";
 
 // Create a new beneficiary
+
 export const createBeneficiary = async (req, res) => {
   try {
-    const { userId, nationalId, firstName, lastName, village, type } = req.body;
+    const {
+      userId,
+      nationalId,
+      firstName,
+      lastName,
+      village,
+      type,
+      totalProgramDays,
+    } = req.body;
 
     // Validate userId
     if (!mongoose.Types.ObjectId.isValid(userId)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid user ID",
-      });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid user ID" });
     }
 
     // Check if beneficiary already exists
-    const existingBeneficiary = await Beneficiaries.findOne({ nationalId });
-    if (existingBeneficiary) {
+    // const existingBeneficiary = await Beneficiaries.findOne({ nationalId });
+    // if (existingBeneficiary) {
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: "Beneficiary with this national ID already exists",
+    //   });
+    // }
+
+    // Validate that totalProgramDays is provided
+    if (!totalProgramDays || isNaN(totalProgramDays) || totalProgramDays <= 0) {
       return res.status(400).json({
         success: false,
-        message: "Beneficiary with this national ID already exists",
+        message: "Please provide a valid total program days value",
       });
-    }
-
-    // Determine total program days based on type
-    let totalProgramDays = 0;
-    if (type === "pregnant") {
-      totalProgramDays = 180; // 6 months
-    } else if (type === "breastfeeding") {
-      totalProgramDays = 365; // 12 months
-    } else if (type === "child") {
-      totalProgramDays = 730; // 24 months
     }
 
     const beneficiary = new Beneficiaries({
@@ -42,7 +48,7 @@ export const createBeneficiary = async (req, res) => {
       village,
       type,
       status: "active",
-      totalProgramDays, // Include total program days
+      totalProgramDays, // now user-defined
     });
 
     await beneficiary.save();
@@ -62,6 +68,7 @@ export const createBeneficiary = async (req, res) => {
     });
   }
 };
+
 // Get all beneficiaries
 export const getBeneficiaries = async (req, res) => {
   try {
@@ -145,7 +152,8 @@ export const fetchBeneficiaries = async (req, res) => {
   try {
     const beneficiary = await Beneficiaries.find()
       .populate("programDays")
-      .populate("userId", "name email role");
+      .populate("userId", "name email role")
+      .sort({ createdAt: -1 });
 
     if (!beneficiary) {
       return res.status(404).json({

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -7,16 +7,18 @@ import {
   ActivityIndicator,
   Dimensions,
   TouchableOpacity,
+  Alert,
 } from "react-native";
 import { Card, Title, Caption } from "react-native-paper";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LineChart, PieChart } from "react-native-chart-kit";
 import { useAuth } from "../../context/AuthContext";
+import { useFocusEffect } from "@react-navigation/native";
 
 import BeneficiaryService from "../../services/beneficiaryService";
 import { getAllProducts } from "../../services/ProductService";
 import { getAllMainStock } from "../../services/mainStockService";
-import DistributeToUmunyabuzimaService from "../../services/distributeToUmunyabuzimaService";
+import { getAllDistributions } from "../../services/distributionService";
 import UserService from "../../services/userService";
 
 const screenWidth = Dimensions.get("window").width;
@@ -38,153 +40,157 @@ const HomeScreen = ({ navigation }) => {
   const [lineData, setLineData] = useState({ labels: [], datasets: [] });
   const [recentActivity, setRecentActivity] = useState([]);
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        const [
-          beneficiariesRes,
-          productsRes,
-          stockRes,
-          distributionsRes,
-          usersRes,
-        ] = await Promise.all([
-          BeneficiaryService.getBeneficiaries(),
-          getAllProducts(),
-          getAllMainStock(),
-          DistributeToUmunyabuzimaService.getDistributions(),
-          UserService.getUsers(),
-        ]);
+  const fetchDashboardData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [
+        beneficiariesRes,
+        productsRes,
+        stockRes,
+        distributionsRes,
+        usersRes,
+      ] = await Promise.all([
+        BeneficiaryService.getBeneficiaries(),
+        getAllProducts(),
+        getAllMainStock(),
+        getAllDistributions(),
+        UserService.getUsers(),
+      ]);
 
-        const beneficiaries = beneficiariesRes.data || [];
-        const totalBeneficiaries = beneficiaries.length;
-        const totalProducts = productsRes.length;
-        const totalStock = stockRes.reduce(
-          (sum, item) => sum + item.totalStock,
-          0
-        );
-        const totalDistributions = distributionsRes.data.length;
-        const totalUsers = usersRes.length;
+      const beneficiaries = beneficiariesRes.data || [];
+      const distributions = distributionsRes || [];
 
-        const activeBeneficiaries = beneficiaries.filter(
-          (b) => b.status === "active" || b.isActive === true
-        );
-        const totalActives = activeBeneficiaries.length;
+      const totalBeneficiaries = beneficiaries.length;
+      const totalProducts = productsRes.length;
+      const totalStock = stockRes.reduce(
+        (sum, item) => sum + item.totalStock,
+        0
+      );
+      const totalDistributions = distributions.length;
+      const totalUsers = usersRes.length;
 
-        // ---- Pie Data ----
-        const childCount = beneficiaries.filter(
-          (b) => b.type === "child"
-        ).length;
-        const breastfeedingCount = beneficiaries.filter(
-          (b) => b.type === "breastfeeding"
-        ).length;
-        const pregnantCount = beneficiaries.filter(
-          (b) => b.type === "pregnant"
-        ).length;
+      const activeBeneficiaries = beneficiaries.filter(
+        (b) => b.status === "active" || b.isActive === true
+      );
+      const totalActives = activeBeneficiaries.length;
 
-        setPieData([
-          {
-            name: "Children",
-            population: childCount,
-            color: "#10B981",
-            legendFontColor: "#333",
-            legendFontSize: 12,
-          },
-          {
-            name: "Breastfeeding",
-            population: breastfeedingCount,
-            color: "#F59E0B",
-            legendFontColor: "#333",
-            legendFontSize: 12,
-          },
-          {
-            name: "Pregnant",
-            population: pregnantCount,
-            color: "#2563EB",
-            legendFontColor: "#333",
-            legendFontSize: 12,
-          },
-        ]);
+      // ---- Pie Data ----
+      const childCount = beneficiaries.filter((b) => b.type === "child").length;
+      const breastfeedingCount = beneficiaries.filter(
+        (b) => b.type === "breastfeeding"
+      ).length;
+      const pregnantCount = beneficiaries.filter(
+        (b) => b.type === "pregnant"
+      ).length;
 
-        // ---- Line Data (Cumulative Growth Over Last 6 Months) ----
-        const now = new Date();
-        const last6Months = [...Array(6)].map((_, i) => {
-          return new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
-        });
+      setPieData([
+        {
+          name: "Children",
+          population: childCount,
+          color: "#10B981",
+          legendFontColor: "#333",
+          legendFontSize: 12,
+        },
+        {
+          name: "Breastfeeding",
+          population: breastfeedingCount,
+          color: "#F59E0B",
+          legendFontColor: "#333",
+          legendFontSize: 12,
+        },
+        {
+          name: "Pregnant",
+          population: pregnantCount,
+          color: "#2563EB",
+          legendFontColor: "#333",
+          legendFontSize: 12,
+        },
+      ]);
 
-        const cumulativeCounts = last6Months.map((monthDate) => {
-          const month = monthDate.getMonth();
-          const year = monthDate.getFullYear();
-          return beneficiaries.filter((b) => {
-            const created = new Date(b.createdAt);
-            return (
-              created.getFullYear() < year ||
-              (created.getFullYear() === year && created.getMonth() <= month)
-            );
-          }).length;
-        });
+      // ---- Line Data (Cumulative Growth Over Last 6 Months) ----
+      const now = new Date();
+      const last6Months = [...Array(6)].map((_, i) => {
+        return new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
+      });
 
-        setLineData({
-          labels: last6Months.map((d) =>
-            d.toLocaleString("default", { month: "short" })
-          ),
-          datasets: [{ data: cumulativeCounts, strokeWidth: 3 }],
-        });
+      const cumulativeCounts = last6Months.map((monthDate) => {
+        const month = monthDate.getMonth();
+        const year = monthDate.getFullYear();
+        return beneficiaries.filter((b) => {
+          const created = new Date(b.createdAt);
+          return (
+            created.getFullYear() < year ||
+            (created.getFullYear() === year && created.getMonth() <= month)
+          );
+        }).length;
+      });
 
-        // ---- Recent Activity (latest 5 across all) ----
-        const activities = [];
+      setLineData({
+        labels: last6Months.map((d) =>
+          d.toLocaleString("default", { month: "short" })
+        ),
+        datasets: [{ data: cumulativeCounts, strokeWidth: 3 }],
+      });
 
-        beneficiaries.slice(-3).forEach((b) =>
-          activities.push({
-            type: "beneficiary",
-            message: `New beneficiary registered: ${b.type || "Unnamed"}`,
-            createdAt: new Date(b.createdAt),
-          })
-        );
+      // ---- Recent Activity (latest 5 across all) ----
+      const activities = [];
 
-        usersRes.slice(-3).forEach((u) =>
-          activities.push({
-            type: "user",
-            message: `New user added: ${u.name || "Unnamed"}`,
-            createdAt: new Date(u.createdAt),
-          })
-        );
+      beneficiaries.slice(-3).forEach((b) =>
+        activities.push({
+          type: "beneficiary",
+          message: `New beneficiary registered: ${b.type || "Unnamed"}`,
+          createdAt: new Date(b.createdAt),
+        })
+      );
 
-        productsRes.slice(-3).forEach((p) =>
-          activities.push({
-            type: "product",
-            message: `Product updated: ${p.name}`,
-            createdAt: new Date(p.createdAt),
-          })
-        );
+      usersRes.slice(-3).forEach((u) =>
+        activities.push({
+          type: "user",
+          message: `New user added: ${u.name || "Unnamed"}`,
+          createdAt: new Date(u.createdAt),
+        })
+      );
 
-        distributionsRes.data.slice(-3).forEach((d) =>
-          activities.push({
-            type: "distribution",
-            message: `Distribution made to Umunyabuzima`,
-            createdAt: new Date(d.createdAt),
-          })
-        );
+      productsRes.slice(-3).forEach((p) =>
+        activities.push({
+          type: "product",
+          message: `Product updated: ${p.name}`,
+          createdAt: new Date(p.createdAt),
+        })
+      );
 
-        activities.sort((a, b) => b.createdAt - a.createdAt);
-        setRecentActivity(activities.slice(0, 5));
+      distributions.slice(-3).forEach((d) =>
+        activities.push({
+          type: "distribution",
+          message: `Distribution made to child`,
+          createdAt: new Date(d.createdAt),
+        })
+      );
 
-        setStats({
-          totalBeneficiaries,
-          totalProducts,
-          totalStock,
-          totalDistributions,
-          totalUsers,
-          totalActives,
-        });
-      } catch (error) {
-        console.error("Error loading dashboard data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+      activities.sort((a, b) => b.createdAt - a.createdAt);
+      setRecentActivity(activities.slice(0, 5));
 
-    fetchDashboardData();
+      setStats({
+        totalBeneficiaries,
+        totalProducts,
+        totalStock,
+        totalDistributions,
+        totalUsers,
+        totalActives,
+      });
+    } catch (error) {
+      console.error("Error loading dashboard data:", error);
+      Alert.alert("Error", "Failed to load dashboard data.");
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchDashboardData();
+    }, [fetchDashboardData])
+  );
 
   if (loading) {
     return (
@@ -388,7 +394,6 @@ const styles = StyleSheet.create({
   },
   greeting: { fontSize: 20, fontWeight: "600", color: "#111827" },
   greetingHighlight: { fontWeight: "bold", color: "blue" },
-
   statsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -405,7 +410,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: 10,
   },
-
   chartCard: { borderRadius: 12, elevation: 3, padding: 15, marginBottom: 20 },
   chartTitle: {
     fontSize: 16,
@@ -413,7 +417,6 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     color: "#374151",
   },
-
   sectionCard: {
     borderRadius: 12,
     elevation: 3,
@@ -426,7 +429,6 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     color: "#374151",
   },
-
   actionsRow: { flexDirection: "column", alignItems: "center", marginTop: 10 },
   actionBtn: {
     flexDirection: "row",
@@ -439,7 +441,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   actionText: { color: "#fff", fontSize: 16, marginLeft: 8 },
-
   activityItem: { flexDirection: "row", alignItems: "center", marginBottom: 8 },
   activityText: { marginLeft: 8, fontSize: 14, color: "#374151" },
 });

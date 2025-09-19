@@ -53,75 +53,43 @@ const beneficiariesSchema = new mongoose.Schema(
       min: 0,
       max: 100,
     },
+
+    // ✅ New column to track admission
+    admissionStatus: {
+      type: String,
+      enum: ["pending", "admitted", "rejected"],
+      default: "pending",
+    },
   },
   { timestamps: true }
 );
 
-// Virtual field to get program days
-beneficiariesSchema.virtual('programDays', {
-  ref: 'ProgramDay',
-  localField: '_id',
-  foreignField: 'beneficiaryId'
+// Virtuals & Methods remain unchanged
+beneficiariesSchema.virtual("programDays", {
+  ref: "ProgramDay",
+  localField: "_id",
+  foreignField: "beneficiaryId",
 });
 
-// Virtual field to get assigned user
-beneficiariesSchema.virtual('assignedUser', {
-  ref: 'User',
-  localField: 'userId',
-  foreignField: '_id',
-  justOne: true
+beneficiariesSchema.virtual("assignedUser", {
+  ref: "User",
+  localField: "userId",
+  foreignField: "_id",
+  justOne: true,
 });
 
-// Ensure virtual fields are serialized
-beneficiariesSchema.set('toJSON', { virtuals: true });
-beneficiariesSchema.set('toObject', { virtuals: true });
+beneficiariesSchema.set("toJSON", { virtuals: true });
+beneficiariesSchema.set("toObject", { virtuals: true });
 
-
-// Method to check if program is completed based on duration
-// Note: This method is disabled as ending_date is removed
-// beneficiariesSchema.methods.checkProgramCompletion = function() {
-//   const now = new Date();
-//   const endDate = new Date(this.ending_date);
-
-//   if (now >= endDate && this.status !== 'completed') {
-//     this.status = 'completed';
-//     return true;
-//   }
-//   return false;
-// };
-
-// Method to calculate attendance rate
-beneficiariesSchema.methods.calculateAttendanceRate = function() {
+beneficiariesSchema.methods.calculateAttendanceRate = function () {
   if (this.totalProgramDays === 0) {
     this.attendanceRate = 0;
   } else {
-    this.attendanceRate = Math.round((this.completedDays / this.totalProgramDays) * 100);
+    this.attendanceRate = Math.round(
+      (this.completedDays / this.totalProgramDays) * 100
+    );
   }
   return this.attendanceRate;
-};
-
-// Method to get days remaining in program
-// Note: This method is disabled as ending_date is removed
-// beneficiariesSchema.methods.getDaysRemaining = function() {
-//   const now = new Date();
-//   const endDate = new Date(this.ending_date);
-//   const diffTime = endDate - now;
-//   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-//   return Math.max(0, diffDays);
-// };
-
-// Static method to update all beneficiaries' status based on completion
-beneficiariesSchema.statics.updateCompletedStatuses = async function() {
-  const beneficiaries = await this.find({ status: { $ne: 'completed' } });
-  const updates = [];
-  
-  for (const beneficiary of beneficiaries) {
-    if (beneficiary.checkProgramCompletion()) {
-      updates.push(beneficiary.save());
-    }
-  }
-  
-  return Promise.all(updates);
 };
 
 const Beneficiaries = mongoose.model("Beneficiaries", beneficiariesSchema);

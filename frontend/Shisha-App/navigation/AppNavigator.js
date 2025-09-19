@@ -1,5 +1,11 @@
 import React from "react";
-import { View, ActivityIndicator, Alert } from "react-native";
+import {
+  View,
+  ActivityIndicator,
+  Alert,
+  TouchableOpacity,
+  StyleSheet,
+} from "react-native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -21,7 +27,7 @@ import ManagerReportsScreen from "../screens/Manager/ReportsScreen";
 import ManagerUsersScreen from "../screens/Manager/UsersScreen";
 import BeneficiariesScreen from "../screens/Manager/BeneficiariesScreen";
 import BeneficiaryDetailsScreen from "../screens/Manager/BeneficiaryDetailsScreen";
-import AddBeneficiaryScreen from "../screens/Manager/AddBeneficiaryScreen";
+
 import AddDistributionScreen from "../screens/Manager/AddDistributionScreen";
 import UserDistributionsScreen from "../screens/Manager/UserDistributionsScreen";
 import StockManagementScreen from "../screens/Manager/StockManagementScreen";
@@ -31,12 +37,14 @@ import AddProductScreen from "../screens/Manager/AddProductScreen";
 import StockTransactionsScreen from "../screens/Manager/StockTransactionsScreen";
 import HelpSupportScreen from "../screens/Manager/HelpSupportScreen";
 import PrivacyPolicyScreen from "../screens/Manager/PrivacyPolicyScreen";
+import AddBeneficiaryScreen from "../screens/Manager/AddBeneficiaryScreen";
 // Health Worker Screens
 import HealthWorkerHomeScreen from "../screens/Health_worker/HomeScreen";
 import HealthWorkerSettingsScreen from "../screens/Health_worker/SettingsScreen";
 import HealthWorkerReportsScreen from "../screens/Health_worker/ReportsScreen";
 import DistributionScreen from "../screens/Health_worker/DistributionScreen";
 import StockScreen from "../screens/Health_worker/StockManagementScreen";
+import AddBeneficiaryHealthScreen from "../screens/Health_worker/AddBeneficiaryScreen";
 import HealthBeneficiariesScreen from "../screens/Health_worker/BeneficiariesScreen";
 import HealthProductsScreen from "../screens/Health_worker/ProductsScreen";
 import HealthProfileScreen from "../screens/Health_worker/ProfileScreen";
@@ -177,8 +185,6 @@ const HealthWorkerTabNavigator = () => {
           backgroundColor: "#FFFFFF",
           borderTopColor: "#E5E5EA",
           borderTopWidth: 1,
-          paddingBottom: 5,
-          paddingTop: 5,
           height: 65,
           elevation: 5,
           shadowColor: "#000",
@@ -186,15 +192,12 @@ const HealthWorkerTabNavigator = () => {
           shadowOpacity: 0.1,
           shadowRadius: 4,
         },
-        headerStyle: {
-          backgroundColor: "#007AFF",
-        },
+        headerStyle: { backgroundColor: "#007AFF" },
         headerTintColor: "#FFFFFF",
-        headerTitleStyle: {
-          fontWeight: "bold",
-        },
+        headerTitleStyle: { fontWeight: "bold" },
       }}
     >
+      {/* Home Tab */}
       <Tab.Screen
         name="Home"
         component={HealthWorkerHomeScreen}
@@ -205,34 +208,27 @@ const HealthWorkerTabNavigator = () => {
           ),
         }}
       />
+
+      {/* Custom + Button */}
       <Tab.Screen
-        name="Stock"
-        component={StockScreen}
+        name="Add"
+        component={AddBeneficiaryHealthScreen}
         options={{
-          tabBarLabel: "Stock",
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons
-              name="warehouse"
-              color={color}
-              size={size}
-            />
+          tabBarButton: (props) => (
+            <TouchableOpacity
+              {...props}
+              style={styles.plusButtonContainer}
+              // onPress={() => Alert.alert("Add", "You pressed the + button!")}
+            >
+              <View style={styles.plusButton}>
+                <MaterialCommunityIcons name="plus" color="#fff" size={28} />
+              </View>
+            </TouchableOpacity>
           ),
         }}
       />
-      <Tab.Screen
-        name="Reports"
-        component={DistributionScreen}
-        options={{
-          tabBarLabel: "Distribution",
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons
-              name="share-variant"
-              color={color}
-              size={size}
-            />
-          ),
-        }}
-      />
+
+      {/* Settings Tab */}
       <Tab.Screen
         name="Settings"
         component={HealthWorkerSettingsScreen}
@@ -246,6 +242,27 @@ const HealthWorkerTabNavigator = () => {
     </Tab.Navigator>
   );
 };
+
+const styles = StyleSheet.create({
+  plusButtonContainer: {
+    top: -15, // Lift button above tab bar
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  plusButton: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "#007AFF",
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+});
 
 // --- App Navigator ---
 const AppNavigator = () => {

@@ -2,23 +2,22 @@ import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
-  Alert,
   StyleSheet,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Modal,
+  FlatList,
   ScrollView,
-  Dimensions,
-  TouchableOpacity,
 } from "react-native";
 import {
+  TextInput,
   Button,
+  Chip,
   Card,
   IconButton,
-  Chip,
-  TextInput,
-  Portal,
-  Modal as PaperModal,
-  Menu,
+  Surface,
 } from "react-native-paper";
+import DropDownPicker from "react-native-dropdown-picker";
 import {
   useFonts,
   Poppins_400Regular,
@@ -26,878 +25,616 @@ import {
   Poppins_600SemiBold,
   Poppins_700Bold,
 } from "@expo-google-fonts/poppins";
-import DistributeToUmunyabuzimaService from "../../services/distributeToUmunyabuzimaService";
+
+import {
+  getAllDistributions,
+  addDistribution,
+  updateDistribution,
+  deleteDistribution,
+} from "../../services/distributionService";
+import { getAllProducts } from "../../services/ProductService";
+import BeneficiaryService from "../../services/beneficiaryService";
+import { useAuth } from "../../context/AuthContext";
 import UserService from "../../services/userService";
-import { getAllProducts } from "../../services/ProductService.js";
-import { format } from "date-fns"; // Used for formatting dates
+import { Alert } from "react-native";
 
-const { width } = Dimensions.get("window");
-const isDesktop = width > 768;
+const DistributionScreen = () => {
+  const [distributions, setDistributions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedType, setSelectedType] = useState("All");
+  const [expandedCardId, setExpandedCardId] = useState(null);
+  const { user } = useAuth();
 
-// --- Card component for mobile view ---
-const DistributionCard = ({ item, openEditModal, handleDelete }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [beneficiaries, setBeneficiaries] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [addModalVisible, setAddModalVisible] = useState(false);
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [itemToEdit, setItemToEdit] = useState(null);
 
-  return (
-    <Card style={styles.card}>
-      <TouchableOpacity
-        onPress={() => setIsExpanded(!isExpanded)}
-        activeOpacity={0.8}
-      >
-        <Card.Content>
-          {/* Main Card View */}
-          <View style={styles.cardHeader}>
-            <View style={styles.cardInfo}>
-              <Text style={styles.cardTitle} numberOfLines={1}>
-                {item.productId?.name}
-              </Text>
-              <Text style={styles.cardSubtitle}>
-                Distributed to: {item.userId?.name}
-              </Text>
-            </View>
-            <View style={styles.cardActions}>
-              <IconButton
-                icon={isExpanded ? "chevron-up" : "chevron-down"}
-                size={20}
-                color="#007bff"
-              />
-            </View>
-          </View>
+  const [form, setForm] = useState({
+    beneficiaryId: "",
+    productId: "",
+    quantityKg: "",
+  });
+  const [processing, setProcessing] = useState(false);
 
-          {/* Expanded Content (Accordion) */}
-          {isExpanded && (
-            <View style={styles.expandedContent}>
-              <View style={styles.expandedRow}>
-                <Text style={styles.expandedLabel}>Quantity:</Text>
-                <Text style={styles.expandedValue}>{item.quantity}</Text>
-              </View>
-              <View style={styles.expandedRow}>
-                <Text style={styles.expandedLabel}>Date:</Text>
-                <Text style={styles.expandedValue}>
-                  {format(new Date(item.createdAt), "MMM dd, yyyy")}
-                </Text>
-              </View>
-              <View style={styles.expandedRow}>
-                <Text style={styles.expandedLabel}>Actions:</Text>
-                <View style={styles.cardActionButtons}>
-                  <IconButton
-                    icon="pencil"
-                    size={20}
-                    color="#3498db"
-                    onPress={() => openEditModal(item)}
-                    style={{ margin: 0 }}
-                  />
-                  <IconButton
-                    icon="delete"
-                    size={20}
-                    color="#e74c3c"
-                    onPress={() => handleDelete(item._id)}
-                    style={{ margin: 0 }}
-                  />
-                </View>
-              </View>
-            </View>
-          )}
-        </Card.Content>
-      </TouchableOpacity>
-    </Card>
-  );
-};
+  const [beneficiaryOpen, setBeneficiaryOpen] = useState(false);
+  const [productOpen, setProductOpen] = useState(false);
+  const [userOpen, setUserOpen] = useState(false);
 
-const UserDistributionsScreen = ({ navigation }) => {
-  // ... (All existing state and functions remain the same)
   const [fontsLoaded] = useFonts({
     Poppins_400Regular,
     Poppins_500Medium,
     Poppins_600SemiBold,
     Poppins_700Bold,
   });
-  const [distributions, setDistributions] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedDateFilter, setSelectedDateFilter] = useState("All");
-  const itemsPerPage = 10;
-  const dateFilters = ["All", "Today", "This Week", "This Month"];
-  const [isCreateModalVisible, setCreateModalVisible] = useState(false);
-  const [isEditModalVisible, setEditModalVisible] = useState(false);
-  const [formValues, setFormValues] = useState({
-    userId: "",
-    productId: "",
-    quantity: "",
-  });
-  const [selectedDistribution, setSelectedDistribution] = useState(null);
-  const [users, setUsers] = useState([]);
-  const [products, setProducts] = useState([]);
-  const [isUserMenuVisible, setUserMenuVisible] = useState(false);
-  const [isProductMenuVisible, setProductMenuVisible] = useState(false);
 
   useEffect(() => {
+    fetchUsers();
     fetchDistributions();
-    fetchUsersProducts();
+    fetchProducts();
   }, []);
 
-  useEffect(() => {
-    const unsubscribe = navigation.addListener("focus", fetchDistributions);
-    return unsubscribe;
-  }, [navigation]);
-
-  const fetchDistributions = async () => {
-    setLoading(true);
+  const fetchUsers = async () => {
     try {
-      const data = await DistributeToUmunyabuzimaService.getDistributions();
-      setDistributions(data.data || []);
+      const data = await UserService.getUsers();
+      const mapped = Array.isArray(data)
+        ? data.map((u) => ({ label: u.name, value: u._id }))
+        : [];
+      setUsers(mapped);
     } catch (error) {
-      console.error("Error fetching distributions:", error);
-      Alert.alert("Error", "Failed to fetch distributions. Please try again.");
-      setDistributions([]);
+      console.error("Error fetching users:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchUsersProducts = async () => {
+  const fetchDistributions = async () => {
     try {
-      const usersData = await UserService.getUsers();
-      const productsData = await getAllProducts();
-      const filteredUsers = usersData.filter(
-        (user) => user.role === "umunyabuzima"
-      );
-      setUsers(filteredUsers || []);
-      setProducts(productsData || []);
+      const data = await getAllDistributions();
+      setDistributions(data);
     } catch (error) {
-      console.error("Error fetching users/products:", error);
-      Alert.alert("Error", "Failed to load user and product data.");
+      alert("Failed to fetch distributions");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchBeneficiaries = async (userId) => {
+    if (!userId) {
+      setBeneficiaries([]);
+      return;
+    }
+
+    try {
+      const response = await BeneficiaryService.getBeneficiary(userId);
+
+      const beneficiariesArray = Array.isArray(response)
+        ? response
+        : Array.isArray(response.data)
+        ? response.data
+        : [];
+
+      const mapped = beneficiariesArray.map((b) => ({
+        label: `${b.firstName} ${b.lastName}`.trim(),
+        value: b._id,
+        type: b.type,
+      }));
+
+      setBeneficiaries(mapped);
+    } catch (err) {
+      console.log("Error fetching beneficiaries:", err);
+      setBeneficiaries([]);
+      Alert.alert("Error", "Failed to fetch beneficiaries for this user");
+    }
+  };
+
+  const fetchProducts = async () => {
+    try {
+      const data = await getAllProducts();
+      const mapped = Array.isArray(data)
+        ? data.map((p) => ({ label: p.name, value: p._id }))
+        : [];
+      setProducts(mapped);
+    } catch {
+      setProducts([]);
+      alert("Failed to fetch products");
     }
   };
 
   const filteredDistributions = useMemo(() => {
-    let result = distributions;
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      result = result.filter(
-        (dist) =>
-          dist.userId?.name?.toLowerCase().includes(q) ||
-          dist.productId?.name?.toLowerCase().includes(q)
+    let filtered = distributions;
+    if (selectedType !== "All") {
+      filtered = filtered.filter(
+        (d) => d.beneficiaryId?.type === selectedType.toLowerCase()
       );
     }
-    const now = new Date();
-    switch (selectedDateFilter) {
-      case "Today":
-        result = result.filter((dist) => {
-          const d = new Date(dist.createdAt);
-          return (
-            d.getDate() === now.getDate() &&
-            d.getMonth() === now.getMonth() &&
-            d.getFullYear() === now.getFullYear()
-          );
-        });
-        break;
-      case "This Week":
-        const startOfWeek = new Date(
-          now.getFullYear(),
-          now.getMonth(),
-          now.getDate() - now.getDay()
-        );
-        result = result.filter(
-          (dist) => new Date(dist.createdAt) >= startOfWeek
-        );
-        break;
-      case "This Month":
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        result = result.filter(
-          (dist) => new Date(dist.createdAt) >= startOfMonth
-        );
-        break;
-      default:
-        break;
+    if (searchQuery.trim()) {
+      filtered = filtered.filter((d) =>
+        `${d.beneficiaryId?.firstName} ${d.beneficiaryId?.lastName}`
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase())
+      );
     }
-    return result;
-  }, [distributions, searchQuery, selectedDateFilter]);
+    return filtered;
+  }, [distributions, selectedType, searchQuery]);
 
-  const paginatedDistributions = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    return filteredDistributions.slice(startIndex, startIndex + itemsPerPage);
-  }, [filteredDistributions, currentPage]);
+  const toggleExpand = (id) =>
+    setExpandedCardId(expandedCardId === id ? null : id);
 
-  const totalPages = Math.ceil(filteredDistributions.length / itemsPerPage);
-
-  useEffect(() => setCurrentPage(1), [filteredDistributions]);
-
-  const handleDelete = async (distributionId) => {
-    Alert.alert("Delete Distribution", "Are you sure?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await DistributeToUmunyabuzimaService.deleteDistribution(
-              distributionId
-            );
-            setDistributions(
-              distributions.filter((dist) => dist._id !== distributionId)
-            );
-            Alert.alert("Success", "Distribution deleted successfully");
-          } catch (error) {
-            Alert.alert("Error", error.message);
-          }
-        },
-      },
-    ]);
+  const openAddModal = () => {
+    setForm({ userId: "", beneficiaryId: "", productId: "", quantityKg: "" });
+    setAddModalVisible(true);
   };
 
-  const openCreateModal = () => {
-    setFormValues({ userId: "", productId: "", quantity: "" });
-    setCreateModalVisible(true);
-  };
-
-  const openEditModal = (dist) => {
-    setSelectedDistribution(dist);
-    setFormValues({
-      userId: dist.userId?._id,
-      productId: dist.productId?._id,
-      quantity: String(dist.quantity),
+  const openEditModal = (item) => {
+    setItemToEdit(item);
+    setForm({
+      beneficiaryId: item.beneficiaryId?._id || "",
+      productId: item.productId?._id || "",
+      quantityKg: String(item.quantityKg),
     });
     setEditModalVisible(true);
   };
 
-  const submitCreate = async () => {
-    if (!formValues.userId || !formValues.productId || !formValues.quantity) {
-      return Alert.alert("Validation Error", "All fields are required");
+  const submitAdd = async () => {
+    if (!form.beneficiaryId || !form.productId || !form.quantityKg) {
+      Alert.alert("Validation", "Please fill all fields");
+      return;
     }
+
+    setProcessing(true);
     try {
-      await DistributeToUmunyabuzimaService.createDistribution(formValues);
-      setCreateModalVisible(false);
+      await addDistribution({ ...form });
+      setAddModalVisible(false);
       fetchDistributions();
-      setFormValues({ userId: "", productId: "", quantity: "" });
-      Alert.alert("Success", "Distribution created successfully!");
-    } catch (error) {
-      const errorMessage =
-        error.response?.data?.message ||
-        "An unexpected error occurred. Please try again.";
-      Alert.alert("Error", errorMessage);
+    } catch (e) {
+      Alert.alert("Error", e.message || "Failed to add distribution");
+    } finally {
+      setProcessing(false);
     }
   };
 
   const submitEdit = async () => {
-    if (!formValues.userId || !formValues.productId || !formValues.quantity) {
-      return Alert.alert("Validation Error", "All fields are required");
+    if (!form.beneficiaryId || !form.productId || !form.quantityKg) {
+      Alert.alert("Validation", "Please fill all fields");
+      return;
     }
+
+    setProcessing(true);
     try {
-      await DistributeToUmunyabuzimaService.updateDistribution(
-        selectedDistribution._id,
-        formValues
-      );
+      await updateDistribution(itemToEdit._id, form);
       setEditModalVisible(false);
       fetchDistributions();
-      setFormValues({ userId: "", productId: "", quantity: "" });
-    } catch (error) {
-      Alert.alert("Error", error.message);
+    } catch (e) {
+      Alert.alert("Error", e.message || "Failed to update distribution");
+    } finally {
+      setProcessing(false);
     }
   };
 
-  const renderPagination = () => (
-    <View style={styles.paginationContainer}>
-      <Button
-        mode="contained"
-        onPress={() => setCurrentPage((p) => Math.max(1, p - 1))}
-        disabled={currentPage === 1}
-        style={styles.pageButton}
-        buttonColor="#007bff"
-      >
-        Previous
-      </Button>
-      <Text style={styles.pageInfo}>
-        Page {currentPage} of {totalPages || 1}
-      </Text>
-      <Button
-        mode="contained"
-        onPress={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-        disabled={currentPage === totalPages}
-        style={styles.pageButton}
-        buttonColor="#007bff"
-      >
-        Next
-      </Button>
-    </View>
-  );
-
-  const renderHeader = () => (
-    <View style={styles.tableHeader}>
-      <Text style={[styles.headerText, { flex: 2 }]}>User</Text>
-      <Text style={[styles.headerText, { flex: 2 }]}>Product</Text>
-      <Text style={[styles.headerText, { flex: 1 }]}>Quantity</Text>
-      <Text style={[styles.headerText, { flex: 1.5 }]}>Date</Text>
-      <Text style={[styles.headerText, { flex: 1.5 }]}>Actions</Text>
-    </View>
-  );
-
-  const renderRow = (item, index) => (
-    <View
-      key={item._id}
-      style={[
-        styles.distributionRow,
-        index % 2 === 0 ? styles.evenRow : styles.oddRow,
-      ]}
-    >
-      <Text style={[styles.cellText, { flex: 2 }]} numberOfLines={1}>
-        {item.userId?.name}
-      </Text>
-      <Text style={[styles.cellText, { flex: 2 }]} numberOfLines={1}>
-        {item.productId?.name}
-      </Text>
-      <Text style={[styles.cellText, { flex: 1, textAlign: "center" }]}>
-        {item.quantity}
-      </Text>
-      <Text style={[styles.cellText, { flex: 1.5 }]}>
-        {new Date(item.createdAt).toLocaleDateString()}
-      </Text>
-      <View style={[styles.actions, { flex: 1.5 }]}>
-        <IconButton
-          icon="pencil"
-          size={16}
-          iconColor="#3498db"
-          onPress={() => openEditModal(item)}
-        />
-        <IconButton
-          icon="delete"
-          size={16}
-          iconColor="#e74c3c"
-          onPress={() => handleDelete(item._id)}
-        />
-      </View>
-    </View>
-  );
-
-  if (loading || !fontsLoaded) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" />
-      </View>
+  const handleDelete = async (id) => {
+    Alert.alert(
+      "Confirm Delete",
+      "Are you sure you want to delete this distribution?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteDistribution(id);
+              fetchDistributions();
+            } catch {
+              alert("Failed to delete distribution");
+            }
+          },
+        },
+      ]
     );
-  }
+  };
 
-  return (
-    <ScrollView showsVerticalScrollIndicator={false} style={styles.container}>
-      {/* ... (Existing buttons and controls) ... */}
+  if (loading || !fontsLoaded)
+    return (
+      <ActivityIndicator style={{ flex: 1 }} size="large" color="#007AFF" />
+    );
+
+  const ListHeader = () => (
+    <View>
       <Card style={styles.buttonsCard}>
         <Card.Content>
           <Button
             icon="plus"
             mode="contained"
-            onPress={openCreateModal}
-            style={styles.createButton}
-            buttonColor="#007bff"
+            buttonColor="#007AFF"
+            onPress={openAddModal}
           >
             Add Distribution
           </Button>
         </Card.Content>
       </Card>
+
       <Card style={styles.controlsCard}>
         <Card.Content>
           <TextInput
+            placeholder="Search by beneficiary..."
             value={searchQuery}
             onChangeText={setSearchQuery}
             mode="outlined"
             left={<TextInput.Icon icon="magnify" />}
-            right={
-              searchQuery ? (
-                <TextInput.Icon
-                  icon="close"
-                  onPress={() => setSearchQuery("")}
-                />
-              ) : null
-            }
-            style={styles.searchInput}
-            placeholder="Search by user or product..."
-            dense={true}
-            theme={{ colors: { primary: "#007bff" } }}
           />
-          <View style={styles.filterContainer}>
-            <Text style={styles.filterLabel}>Filter by Date:</Text>
-            <View style={styles.filterChips}>
-              {dateFilters.map((filter) => (
-                <Chip
-                  key={filter}
-                  mode={selectedDateFilter === filter ? "flat" : "outlined"}
-                  onPress={() => setSelectedDateFilter(filter)}
-                  style={
-                    selectedDateFilter === filter
-                      ? styles.selectedChip
-                      : styles.chip
-                  }
-                  textStyle={
-                    selectedDateFilter === filter
-                      ? styles.selectedChipText
-                      : styles.chipText
-                  }
-                  compact
-                  height={32}
-                >
-                  {filter}
-                </Chip>
-              ))}
-            </View>
+          <View
+            style={{ flexDirection: "row", flexWrap: "wrap", marginTop: 8 }}
+          >
+            {["All", "Child", "Pregnant", "Breastfeeding"].map((type) => (
+              <Chip
+                key={type}
+                mode={selectedType === type ? "flat" : "outlined"}
+                selected={selectedType === type}
+                onPress={() => setSelectedType(type)}
+                style={
+                  selectedType === type ? styles.selectedChip : styles.chip
+                }
+              >
+                {type}
+              </Chip>
+            ))}
           </View>
         </Card.Content>
       </Card>
-      <Card style={styles.summaryCard}>
-        <Card.Content>
-          <Text style={styles.resultsText}>
-            Showing {paginatedDistributions.length} of{" "}
-            {filteredDistributions.length} distributions
-          </Text>
-        </Card.Content>
-      </Card>
+    </View>
+  );
 
-      {/* Conditional Rendering of Table or Cards */}
-      {isDesktop ? (
-        // Web/Desktop Table View
-        <View style={styles.tableCard}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={styles.tableWrapper}>
-              {renderHeader()}
-              {paginatedDistributions.length > 0 ? (
-                paginatedDistributions.map(renderRow)
-              ) : (
-                <Text style={styles.empty}>No distributions found</Text>
-              )}
+  return (
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
+      <Surface style={styles.container}>
+        <FlatList
+          data={filteredDistributions}
+          keyExtractor={(item) => item._id}
+          ListHeaderComponent={ListHeader}
+          renderItem={({ item }) => (
+            <Card style={styles.distributionCard}>
+              <Card.Content style={styles.cardContent}>
+                {/* Main Card Content (smaller header) */}
+                <View style={styles.cardHeader}>
+                  <View style={styles.cardTitleContainer}>
+                    <Text style={styles.cardTitle} numberOfLines={1}>
+                      {item.productId?.name || "N/A"}
+                    </Text>
+                    <Text style={styles.cardSubtitle} numberOfLines={1}>
+                      {item.beneficiaryId?.firstName || "N/A"}{" "}
+                      {item.beneficiaryId?.lastName || "N/A"}
+                    </Text>
+                  </View>
+                  <View style={styles.cardRightContent}>
+                    <Text style={styles.cardValue} numberOfLines={1}>
+                      {item.quantityKg} Kg
+                    </Text>
+                    <IconButton
+                      icon={
+                        expandedCardId === item._id
+                          ? "chevron-up"
+                          : "chevron-down"
+                      }
+                      size={20}
+                      color="#007AFF"
+                      onPress={() => toggleExpand(item._id)}
+                      style={styles.expandIcon}
+                    />
+                  </View>
+                </View>
+
+                {/* Expanded Content with a divider */}
+                {expandedCardId === item._id && (
+                  <View style={styles.expandedContent}>
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Beneficiary Type:</Text>
+                      <Text style={styles.detailValue}>
+                        {item.beneficiaryId?.type || "N/A"}
+                      </Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Date:</Text>
+                      <Text style={styles.detailValue}>
+                        {new Date(item.distributionDate).toLocaleDateString()}
+                      </Text>
+                    </View>
+                    <View style={styles.actions}>
+                      <IconButton
+                        icon="pencil"
+                        color="#f39c12"
+                        size={24}
+                        onPress={() => openEditModal(item)}
+                      />
+                      <IconButton
+                        icon="delete"
+                        color="#e74c3c"
+                        size={24}
+                        onPress={() => handleDelete(item._id)}
+                      />
+                    </View>
+                  </View>
+                )}
+              </Card.Content>
+            </Card>
+          )}
+        />
+        <Modal transparent visible={addModalVisible}>
+          <ScrollView contentContainerStyle={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Add Distribution</Text>
+              <Text style={styles.inputLabel}>Health Worker</Text>
+              <DropDownPicker
+                open={userOpen}
+                value={form.userId}
+                items={users || []}
+                setOpen={setUserOpen}
+                setValue={(callback) => {
+                  setForm((prev) => {
+                    const newUserId = callback(prev.userId);
+                    fetchBeneficiaries(newUserId);
+                    return { ...prev, userId: newUserId, beneficiaryId: "" };
+                  });
+                }}
+                placeholder="Select Health worker"
+                zIndex={3000}
+                style={styles.dropdown}
+              />
+              <Text style={styles.inputLabel}>Beneficiary</Text>
+              <DropDownPicker
+                open={beneficiaryOpen}
+                value={form.beneficiaryId}
+                items={beneficiaries || []}
+                setOpen={setBeneficiaryOpen}
+                setValue={(callback) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    beneficiaryId: callback(prev.beneficiaryId),
+                  }))
+                }
+                placeholder={
+                  form.userId
+                    ? "Select Beneficiary"
+                    : "Please select a Health Worker first"
+                }
+                disabled={!form.userId}
+                zIndex={2000}
+                style={styles.dropdown}
+              />
+              <Text style={styles.inputLabel}>Product</Text>
+              <DropDownPicker
+                open={productOpen}
+                value={form.productId}
+                items={products || []}
+                setOpen={setProductOpen}
+                setValue={(callback) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    productId: callback(prev.productId),
+                  }))
+                }
+                placeholder="Select Product"
+                zIndex={1000}
+                style={styles.dropdown}
+              />
+              <TextInput
+                label="Quantity (Kg)"
+                value={form.quantityKg}
+                onChangeText={(text) => setForm({ ...form, quantityKg: text })}
+                keyboardType="numeric"
+                style={styles.textInput}
+                mode="outlined"
+              />
+              <View style={styles.modalButtons}>
+                <Button
+                  mode="outlined"
+                  onPress={() => setAddModalVisible(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  mode="contained"
+                  onPress={submitAdd}
+                  loading={processing}
+                >
+                  Add
+                </Button>
+              </View>
             </View>
           </ScrollView>
-        </View>
-      ) : (
-        // Mobile Card View
-        <View style={styles.mobileListContainer}>
-          {paginatedDistributions.length > 0 ? (
-            paginatedDistributions.map((item) => (
-              <DistributionCard
-                key={item._id}
-                item={item}
-                openEditModal={openEditModal}
-                handleDelete={handleDelete}
-              />
-            ))
-          ) : (
-            <Text style={styles.empty}>No distributions found</Text>
-          )}
-        </View>
-      )}
+        </Modal>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <Card style={styles.paginationCard}>
-          <Card.Content>{renderPagination()}</Card.Content>
-        </Card>
-      )}
-
-      {/* Modals (No change needed here, they are already responsive) */}
-      <Portal>
-        <PaperModal
-          visible={isCreateModalVisible}
-          onDismiss={() => setCreateModalVisible(false)}
-          contentContainerStyle={styles.modalContainer}
-        >
-          <Text style={styles.modalTitle}>Create Distribution</Text>
-          <Menu
-            visible={isUserMenuVisible}
-            onDismiss={() => setUserMenuVisible(false)}
-            anchor={
-              <TextInput
-                label="Select User"
-                value={
-                  users.find((u) => u._id === formValues.userId)?.name || ""
+        <Modal transparent visible={editModalVisible}>
+          <ScrollView contentContainerStyle={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Edit Distribution</Text>
+              <Text style={styles.inputLabel}>Beneficiary</Text>
+              <DropDownPicker
+                open={beneficiaryOpen}
+                value={form.beneficiaryId}
+                items={beneficiaries || []}
+                setOpen={setBeneficiaryOpen}
+                setValue={(callback) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    beneficiaryId: callback(prev.beneficiaryId),
+                  }))
                 }
-                mode="outlined"
-                right={<TextInput.Icon icon="menu-down" />}
-                style={{ marginBottom: 12 }}
-                onPress={() => setUserMenuVisible(true)}
+                placeholder="Select Beneficiary"
+                zIndex={2000}
+                style={styles.dropdown}
               />
-            }
-          >
-            {users.map((user) => (
-              <Menu.Item
-                key={user._id}
-                onPress={() => {
-                  setFormValues({ ...formValues, userId: user._id });
-                  setUserMenuVisible(false);
-                }}
-                title={user.name}
-              />
-            ))}
-          </Menu>
-          <Menu
-            visible={isProductMenuVisible}
-            onDismiss={() => setProductMenuVisible(false)}
-            anchor={
-              <TextInput
-                label="Select Product"
-                value={
-                  products.find((p) => p._id === formValues.productId)?.name ||
-                  ""
+              <Text style={styles.inputLabel}>Product</Text>
+              <DropDownPicker
+                open={productOpen}
+                value={form.productId}
+                items={products || []}
+                setOpen={setProductOpen}
+                setValue={(callback) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    productId: callback(prev.productId),
+                  }))
                 }
-                mode="outlined"
-                right={<TextInput.Icon icon="menu-down" />}
-                style={{ marginBottom: 12 }}
-                onPress={() => setProductMenuVisible(true)}
+                placeholder="Select Product"
+                zIndex={1000}
+                style={styles.dropdown}
               />
-            }
-          >
-            {products.map((product) => (
-              <Menu.Item
-                key={product._id}
-                onPress={() => {
-                  setFormValues({ ...formValues, productId: product._id });
-                  setProductMenuVisible(false);
-                }}
-                title={product.name}
-              />
-            ))}
-          </Menu>
-          <TextInput
-            label="Quantity"
-            value={formValues.quantity}
-            onChangeText={(text) =>
-              setFormValues({ ...formValues, quantity: text })
-            }
-            keyboardType="numeric"
-            mode="outlined"
-            style={{ marginBottom: 16 }}
-          />
-          <Button
-            mode="contained"
-            onPress={submitCreate}
-            style={{ marginBottom: 8 }}
-          >
-            Save
-          </Button>
-          <Button mode="text" onPress={() => setCreateModalVisible(false)}>
-            Cancel
-          </Button>
-        </PaperModal>
-      </Portal>
-
-      <Portal>
-        <PaperModal
-          visible={isEditModalVisible}
-          onDismiss={() => setEditModalVisible(false)}
-          contentContainerStyle={styles.modalContainer}
-        >
-          <Text style={styles.modalTitle}>Edit Distribution</Text>
-          <Menu
-            visible={isUserMenuVisible}
-            onDismiss={() => setUserMenuVisible(false)}
-            anchor={
               <TextInput
-                label="Select User"
-                value={
-                  users.find((u) => u._id === formValues.userId)?.name || ""
-                }
+                label="Quantity (Kg)"
+                value={form.quantityKg}
+                onChangeText={(text) => setForm({ ...form, quantityKg: text })}
+                keyboardType="numeric"
+                style={styles.textInput}
                 mode="outlined"
-                right={<TextInput.Icon icon="menu-down" />}
-                style={{ marginBottom: 12 }}
-                onPress={() => setUserMenuVisible(true)}
               />
-            }
-          >
-            {users.map((user) => (
-              <Menu.Item
-                key={user._id}
-                onPress={() => {
-                  setFormValues({ ...formValues, userId: user._id });
-                  setUserMenuVisible(false);
-                }}
-                title={user.name}
-              />
-            ))}
-          </Menu>
-          <Menu
-            visible={isProductMenuVisible}
-            onDismiss={() => setProductMenuVisible(false)}
-            anchor={
-              <TextInput
-                label="Select Product"
-                value={
-                  products.find((p) => p._id === formValues.productId)?.name ||
-                  ""
-                }
-                mode="outlined"
-                right={<TextInput.Icon icon="menu-down" />}
-                style={{ marginBottom: 12 }}
-                onPress={() => setProductMenuVisible(true)}
-              />
-            }
-          >
-            {products.map((product) => (
-              <Menu.Item
-                key={product._id}
-                onPress={() => {
-                  setFormValues({ ...formValues, productId: product._id });
-                  setProductMenuVisible(false);
-                }}
-                title={product.name}
-              />
-            ))}
-          </Menu>
-          <TextInput
-            label="Quantity"
-            value={formValues.quantity}
-            onChangeText={(text) =>
-              setFormValues({ ...formValues, quantity: text })
-            }
-            keyboardType="numeric"
-            mode="outlined"
-            style={{ marginBottom: 16 }}
-          />
-          <Button
-            mode="contained"
-            onPress={submitEdit}
-            style={{ marginBottom: 8 }}
-          >
-            Update
-          </Button>
-          <Button mode="text" onPress={() => setEditModalVisible(false)}>
-            Cancel
-          </Button>
-        </PaperModal>
-      </Portal>
-    </ScrollView>
+              <View style={styles.modalButtons}>
+                <Button
+                  mode="outlined"
+                  onPress={() => setEditModalVisible(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  mode="contained"
+                  onPress={submitEdit}
+                  loading={processing}
+                >
+                  Update
+                </Button>
+              </View>
+            </View>
+          </ScrollView>
+        </Modal>
+      </Surface>
+    </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
-  // ... (All existing styles remain, with additions below)
-  container: {
-    flex: 1,
-    padding: 16,
-    backgroundColor: "#f5f7fa",
-  },
-  center: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalContainer: {
-    backgroundColor: "white",
-    padding: 20,
-    margin: 16,
-    borderRadius: 8,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontFamily: "Poppins_600SemiBold",
-    marginBottom: 16,
-  },
-  dropdownLabel: {
-    fontSize: 14,
-    color: "#34495e",
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    fontFamily: "Poppins_500Medium",
-  },
-  dropdownItem: {
-    fontFamily: "Poppins_400Regular",
-  },
-  buttonsCard: {
-    marginBottom: 16,
-    elevation: 2,
-    borderRadius: 8,
-  },
-  createButton: {
-    minWidth: 150,
-    borderRadius: 6,
-    alignSelf: isDesktop ? "flex-start" : "stretch",
-  },
-  controlsCard: {
-    marginBottom: 16,
-    elevation: 2,
-    borderRadius: 8,
-  },
-  searchInput: {
-    backgroundColor: "#fff",
-    height: 40,
+  container: { flex: 1, padding: 16, backgroundColor: "#f4f6f8" },
+  buttonsCard: { marginBottom: 16, borderRadius: 12 },
+  controlsCard: { marginBottom: 16, borderRadius: 12 },
+  chip: { marginRight: 6, marginBottom: 6, backgroundColor: "#ecf0f1" },
+  selectedChip: { marginRight: 6, marginBottom: 6, backgroundColor: "#007AFF" },
+  distributionCard: {
     marginBottom: 12,
-  },
-  filterContainer: {
-    marginBottom: 8,
-  },
-  filterLabel: {
-    fontSize: 14,
-    fontFamily: "Poppins_600SemiBold",
-    marginBottom: 8,
-    color: "#34495e",
-  },
-  filterChips: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  chip: {
-    backgroundColor: "#ecf0f1",
-    height: 32,
-    borderColor: "#e0e0e0",
-  },
-  chipText: {
-    color: "#34495e",
-    fontFamily: "Poppins_500Medium",
-  },
-  selectedChip: {
-    backgroundColor: "#007bff",
-    height: 32,
-  },
-  selectedChipText: {
-    color: "#fff",
-    fontFamily: "Poppins_500Medium",
-  },
-  summaryCard: {
-    marginBottom: 16,
-    elevation: 1,
-    backgroundColor: "#e6f3ff",
-    borderRadius: 8,
-  },
-  resultsText: {
-    fontSize: 14,
-    fontFamily: "Poppins_500Medium",
-    color: "#007bff",
-    textAlign: "center",
-  },
-  tableCard: {
-    flex: 1,
+    borderRadius: 12,
     elevation: 2,
-    marginBottom: 16,
-    borderRadius: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1,
   },
-  tableWrapper: {
-    minWidth: 700,
-    backgroundColor: "#fff",
-  },
-  tableHeader: {
-    flexDirection: "row",
-    backgroundColor: "#2c3e50",
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
-  },
-  headerText: {
-    color: "#ecf0f1",
-    fontFamily: "Poppins_600SemiBold",
-    fontSize: 13,
-    textAlign: "left",
-  },
-  distributionRow: {
-    flexDirection: "row",
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e4e8",
-    alignItems: "center",
-  },
-  evenRow: {
-    backgroundColor: "#f8f9fa",
-  },
-  oddRow: {
-    backgroundColor: "#fff",
-  },
-  cellText: {
-    fontSize: 12,
-    fontFamily: "Poppins_400Regular",
-    color: "#2c3e50",
-    flexShrink: 1,
-  },
-  actions: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-  },
-  paginationCard: {
-    marginTop: 0,
-    elevation: 2,
-    borderRadius: 8,
-  },
-  paginationContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 10,
-  },
-  pageButton: {
-    flex: 1,
-    marginHorizontal: 5,
-  },
-  pageInfo: {
-    fontSize: 14,
-    fontFamily: "Poppins_600SemiBold",
-    color: "#7f8c8d",
-  },
-  empty: {
-    textAlign: "center",
-    fontSize: 16,
-    fontFamily: "Poppins_400Regular",
-    color: "#7f8c8d",
-    padding: 40,
-    fontStyle: "italic",
-  },
-  // --- NEW MOBILE STYLES ---
-  mobileListContainer: {
-    flex: 1,
-    marginBottom: 16,
-  },
-  card: {
-    marginBottom: 10,
-    elevation: 2,
-    borderRadius: 8,
-    backgroundColor: "#fff",
+  cardContent: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
   },
   cardHeader: {
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
-    paddingBottom: 5,
+    alignItems: "center",
   },
-  cardInfo: {
+  cardTitleContainer: {
     flex: 1,
-    marginRight: 10,
+    paddingRight: 10,
   },
   cardTitle: {
-    fontSize: 16,
     fontFamily: "Poppins_600SemiBold",
-    color: "#2c3e50",
+    fontSize: 16,
+    color: "#34495e",
   },
   cardSubtitle: {
-    fontSize: 13,
     fontFamily: "Poppins_400Regular",
+    fontSize: 12,
     color: "#7f8c8d",
+    marginTop: 2,
   },
-  cardActions: {
-    justifyContent: "center",
+  cardRightContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+  },
+  cardValue: {
+    fontFamily: "Poppins_700Bold",
+    fontSize: 14,
+    color: "#007AFF",
+    marginRight: 4,
+  },
+  expandIcon: {
+    marginLeft: 0,
+    marginRight: -8,
   },
   expandedContent: {
     marginTop: 10,
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: "#e0e4e8",
+    borderTopColor: "#e0e0e0",
   },
-  expandedRow: {
+  detailRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: 4,
   },
-  expandedLabel: {
-    fontSize: 13,
+  detailLabel: {
     fontFamily: "Poppins_500Medium",
-    color: "#34495e",
-  },
-  expandedValue: {
     fontSize: 13,
+    color: "#555",
+  },
+  detailValue: {
     fontFamily: "Poppins_400Regular",
+    fontSize: 13,
     color: "#2c3e50",
     textAlign: "right",
+    flexShrink: 1,
   },
-  cardActionButtons: {
+  actions: {
     flexDirection: "row",
     justifyContent: "flex-end",
+    marginTop: 8,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.5)",
+    paddingHorizontal: 20,
+  },
+  modalContent: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 20,
+    width: "100%",
+  },
+  modalTitle: {
+    fontFamily: "Poppins_700Bold",
+    fontSize: 20,
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontFamily: "Poppins_500Medium",
+    fontSize: 14,
+    color: "#34495e",
+    marginTop: 10,
+    marginBottom: 4,
+  },
+  dropdown: {
+    marginBottom: 15,
+  },
+  textInput: {
+    marginBottom: 15,
+  },
+  modalButtons: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    marginTop: 20,
+    gap: 10,
   },
 });
 
-export default UserDistributionsScreen;
+export default DistributionScreen;

@@ -75,12 +75,18 @@ const BeneficiariesScreen = ({ navigation, route }) => {
     }
   };
 
+  // State
+  const [selectedAdmissionStatus, setSelectedAdmissionStatus] = useState("All");
+
+  // Filtering
   const filteredBeneficiaries = useMemo(() => {
     let list = beneficiaries;
     if (selectedStatus !== "All")
       list = list.filter((b) => b.status === selectedStatus);
     if (selectedType !== "All")
       list = list.filter((b) => b.type === selectedType);
+    if (selectedAdmissionStatus !== "All")
+      list = list.filter((b) => b.admissionStatus === selectedAdmissionStatus);
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       list = list.filter(
@@ -91,7 +97,13 @@ const BeneficiariesScreen = ({ navigation, route }) => {
       );
     }
     return list;
-  }, [beneficiaries, selectedStatus, selectedType, searchQuery]);
+  }, [
+    beneficiaries,
+    selectedStatus,
+    selectedType,
+    selectedAdmissionStatus,
+    searchQuery,
+  ]);
 
   const paginatedBeneficiaries = useMemo(() => {
     const start = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -246,6 +258,27 @@ const BeneficiariesScreen = ({ navigation, route }) => {
               ))}
             </View>
           </View>
+          <View style={styles.filterBlock}>
+            <Text style={styles.filterLabel}>Admission Status</Text>
+            <View style={styles.chipsRow}>
+              {["All", "pending", "admitted", "rejected"].map((s) => (
+                <Chip
+                  key={s}
+                  selected={selectedAdmissionStatus === s}
+                  onPress={() => setSelectedAdmissionStatus(s)}
+                  style={[
+                    styles.chip,
+                    selectedAdmissionStatus === s && styles.selectedChip,
+                  ]}
+                  textStyle={styles.chipText}
+                  selectedColor={BLUE}
+                  showSelectedCheck={false}
+                >
+                  {s}
+                </Chip>
+              ))}
+            </View>
+          </View>
         </View>
 
         {/* Beneficiary List container with a fixed height */}
@@ -258,7 +291,7 @@ const BeneficiariesScreen = ({ navigation, route }) => {
             {paginatedBeneficiaries.length > 0 ? (
               paginatedBeneficiaries.map((b) => (
                 <Card key={b._id} style={styles.card}>
-                  <Card.Content>
+                  <Card.Content style={styles.cardContent}>
                     <View style={styles.rowBetween}>
                       {/* Left side: Beneficiary details */}
                       <View style={{ flex: 1, paddingRight: 8 }}>
@@ -298,7 +331,8 @@ const BeneficiariesScreen = ({ navigation, route }) => {
                             icon="eye"
                             iconColor={BLUE}
                             onPress={() => openModalWith(b)}
-                            size={22}
+                            size={20}
+                            style={styles.iconButton}
                           />
                           <IconButton
                             icon="pencil"
@@ -308,13 +342,15 @@ const BeneficiariesScreen = ({ navigation, route }) => {
                                 beneficiary: b,
                               })
                             }
-                            size={22}
+                            size={20}
+                            style={styles.iconButton}
                           />
                           <IconButton
                             icon="delete"
                             iconColor="#e74c3c"
                             onPress={() => handleDelete(b._id)}
-                            size={22}
+                            size={20}
+                            style={styles.iconButton}
                           />
                         </View>
                         <Chip
@@ -423,6 +459,25 @@ const BeneficiariesScreen = ({ navigation, route }) => {
                       <Text style={styles.detailLabel}>Status:</Text>
                       <Text style={styles.detailValue}>
                         {selectedBeneficiary.status}
+                      </Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Admission Status:</Text>
+                      <Text
+                        style={[
+                          styles.detailValue,
+                          {
+                            color:
+                              selectedBeneficiary.admissionStatus === "pending"
+                                ? "orange"
+                                : selectedBeneficiary.admissionStatus ===
+                                  "admitted"
+                                ? "green"
+                                : "red",
+                          },
+                        ]}
+                      >
+                        {selectedBeneficiary.admissionStatus}
                       </Text>
                     </View>
                   </Card.Content>
@@ -565,14 +620,14 @@ const styles = StyleSheet.create({
   chipsRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8, // Use gap for modern spacing
+    gap: 8,
   },
   chip: {
     borderRadius: 10,
     borderWidth: 1,
     borderColor: "#e0e0e0",
     backgroundColor: "#fff",
-    paddingHorizontal: 4,
+    paddingHorizontal: 1,
     minHeight: 36,
     justifyContent: "center",
   },
@@ -582,54 +637,59 @@ const styles = StyleSheet.create({
   },
   chipText: {
     fontFamily: "Poppins_500Medium",
-    fontSize: 13,
+    fontSize: 10,
     color: "#555",
   },
-  // New styles for the ScrollView container
   listContainerWrapper: {
-    maxHeight: screenHeight * 0.45, // Set the maximum height
-    flexShrink: 1, // Allows the container to shrink if needed
+    maxHeight: screenHeight * 0.45,
+    flexShrink: 1,
     marginBottom: 16,
   },
   listContainer: {
-    flexGrow: 0, // Crucial to prevent ScrollView from taking all vertical space
+    flexGrow: 0,
   },
   listContentContainer: {
-    paddingBottom: 16, // Add padding at the bottom for better scroll feel
+    paddingBottom: 16,
   },
-
   rowBetween: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-
+  // --- CARD STYLES (UPDATED) ---
   card: {
-    marginBottom: 12,
+    marginBottom: 6,
     borderRadius: 12,
     elevation: 2,
     backgroundColor: "#fff",
-    paddingVertical: 1,
+  },
+  cardContent: {
+    paddingVertical: 8, // Reduced padding for a smaller card
   },
   name: {
     fontFamily: "Poppins_600SemiBold",
-    fontSize: 16,
+    fontSize: 14, // Smaller font size for the name
     color: "#2c3e50",
   },
   detailRow: {
     flexDirection: "row",
     justifyContent: "space-between",
+    marginBottom: 4, // Tighter spacing between details
   },
   detailLabel: {
     fontFamily: "Poppins_500Medium",
-    fontSize: 13,
+    fontSize: 12, // Smaller font size for labels
     color: "#7f8c8d",
   },
   detailValue: {
     fontFamily: "Poppins_400Regular",
-    fontSize: 13,
+    fontSize: 12, // Smaller font size for values
     color: "#2c3e50",
     textAlign: "right",
+  },
+  iconButton: {
+    width: 28, // Smaller icon size
+    height: 28,
   },
   typeTag: {
     backgroundColor: "#ecf0f1",
@@ -641,10 +701,10 @@ const styles = StyleSheet.create({
   },
   typeTagText: {
     fontFamily: "Poppins_500Medium",
-    fontSize: 12,
+    fontSize: 10,
     color: "#34495e",
   },
-
+  // --- MODAL STYLES (UPDATED) ---
   empty: {
     textAlign: "center",
     marginTop: 40,
@@ -696,23 +756,6 @@ const styles = StyleSheet.create({
     fontFamily: "Poppins_600SemiBold",
     fontSize: 16,
     color: "#34495e",
-  },
-  detailRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 6,
-  },
-  detailLabel: {
-    fontFamily: "Poppins_600SemiBold",
-    fontSize: 13,
-    color: "#34495e",
-  },
-  detailValue: {
-    fontFamily: "Poppins_400Regular",
-    fontSize: 14,
-    color: "#333",
-    flexShrink: 1,
-    textAlign: "right",
   },
   modalProgress: {
     height: 10,

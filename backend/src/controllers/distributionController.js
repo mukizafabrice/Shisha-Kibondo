@@ -1,10 +1,11 @@
 import Distribution from "../models/Distribution.js";
 import Stock from "../models/Stock.js";
+import MainStock from "../models/MainStock.js";
 import Beneficiaries from "../models/Beneficiaries.js"; // import model
 
 export const createDistribution = async (req, res) => {
   try {
-    const { beneficiaryId, productId, quantityKg, userId } = req.body;
+    const { userId, beneficiaryId, productId, quantityKg } = req.body;
 
     if (!beneficiaryId || !productId || !quantityKg || !userId) {
       return res
@@ -13,7 +14,7 @@ export const createDistribution = async (req, res) => {
     }
 
     // Check stock availability
-    const stock = await Stock.findOne({ productId });
+    const stock = await MainStock.findOne({ productId });
     if (!stock)
       return res
         .status(400)
@@ -64,8 +65,8 @@ export const getAllDistributions = async (req, res) => {
   try {
     const distributions = await Distribution.find()
       .populate("beneficiaryId")
-      .populate("productId", "name") // populate product name
-      .populate("userId", "name email");
+      .populate("productId", "name")
+      .sort({ createdAt: -1 });
 
     res.status(200).json(distributions);
   } catch (error) {
