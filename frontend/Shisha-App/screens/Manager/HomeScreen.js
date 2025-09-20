@@ -162,7 +162,7 @@ const HomeScreen = ({ navigation }) => {
       distributions.slice(-3).forEach((d) =>
         activities.push({
           type: "distribution",
-          message: `Distribution made to child`,
+          message: `Distribution made ${d.beneficiaryId?.type}`,
           createdAt: new Date(d.createdAt),
         })
       );

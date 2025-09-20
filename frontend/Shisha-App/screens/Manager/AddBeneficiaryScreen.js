@@ -43,8 +43,7 @@ const AddBeneficiaryScreen = ({ navigation, route }) => {
     lastName: "",
     village: "",
     type: "",
-    totalProgramDays: 180,
-    extendReduceDays: 0,
+    totalProgramDays: "", // no hardcoded default
     status: "active",
     admissionStatus: "pending",
   });
@@ -79,8 +78,7 @@ const AddBeneficiaryScreen = ({ navigation, route }) => {
         lastName: beneficiary.lastName || "",
         village: beneficiary.village || "",
         type: beneficiary.type || "",
-        totalProgramDays: beneficiary.totalProgramDays || 180,
-        extendReduceDays: 0,
+        totalProgramDays: beneficiary.totalProgramDays?.toString() || "",
         status: beneficiary.status || "active",
         admissionStatus: beneficiary.admissionStatus || "pending",
       });
@@ -104,11 +102,16 @@ const AddBeneficiaryScreen = ({ navigation, route }) => {
   const validateForm = () => {
     const newErrors = {};
     if (!formData.userId) newErrors.userId = "Please assign a health worker";
-    if (!formData.nationalId.trim()) newErrors.nationalId = "National ID is required";
-    if (!formData.firstName.trim()) newErrors.firstName = "First name is required";
+    if (!formData.nationalId.trim())
+      newErrors.nationalId = "National ID is required";
+    if (!formData.firstName.trim())
+      newErrors.firstName = "First name is required";
     if (!formData.lastName.trim()) newErrors.lastName = "Last name is required";
     if (!formData.village.trim()) newErrors.village = "Village is required";
     if (!formData.type) newErrors.type = "Beneficiary type is required";
+    if (!formData.totalProgramDays || Number(formData.totalProgramDays) < 1) {
+      newErrors.totalProgramDays = "Total program days must be at least 1";
+    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -126,17 +129,16 @@ const AddBeneficiaryScreen = ({ navigation, route }) => {
 
     setLoading(true);
     try {
-      let updatedProgramDays = Number(formData.totalProgramDays) || 180;
-
-      if (isEditMode && Number(formData.extendReduceDays) !== 0) {
-        updatedProgramDays += Number(formData.extendReduceDays);
-        if (updatedProgramDays < 1) updatedProgramDays = 1;
-      }
-
-      const beneficiaryData = { ...formData, totalProgramDays: updatedProgramDays };
+      const beneficiaryData = {
+        ...formData,
+        totalProgramDays: Number(formData.totalProgramDays),
+      };
 
       if (isEditMode) {
-        await BeneficiaryService.updateBeneficiary(beneficiary._id, beneficiaryData);
+        await BeneficiaryService.updateBeneficiary(
+          beneficiary._id,
+          beneficiaryData
+        );
         Alert.alert("Success", "Beneficiary updated successfully!", [
           { text: "OK", onPress: () => navigation.goBack() },
         ]);
@@ -160,7 +162,11 @@ const AddBeneficiaryScreen = ({ navigation, route }) => {
       "Are you sure you want to cancel? All entered data will be lost.",
       [
         { text: "Continue Editing", style: "cancel" },
-        { text: "Cancel", style: "destructive", onPress: () => navigation.goBack() },
+        {
+          text: "Cancel",
+          style: "destructive",
+          onPress: () => navigation.goBack(),
+        },
       ]
     );
   };
@@ -189,7 +195,9 @@ const AddBeneficiaryScreen = ({ navigation, route }) => {
             <View style={styles.userContainer}>
               <Text style={styles.userLabel}>Assign Health Worker *</Text>
               {loadingUsers ? (
-                <Text style={styles.loadingText}>Loading health workers...</Text>
+                <Text style={styles.loadingText}>
+                  Loading health workers...
+                </Text>
               ) : (
                 <Menu
                   visible={menuVisible}
@@ -198,7 +206,9 @@ const AddBeneficiaryScreen = ({ navigation, route }) => {
                     <TextInput
                       mode="outlined"
                       label="Select Health Worker"
-                      value={users.find((u) => u._id === formData.userId)?.name || ""}
+                      value={
+                        users.find((u) => u._id === formData.userId)?.name || ""
+                      }
                       onFocus={() => setMenuVisible(true)}
                       right={<TextInput.Icon icon="menu-down" />}
                     />
@@ -300,23 +310,30 @@ const AddBeneficiaryScreen = ({ navigation, route }) => {
               </HelperText>
             </View>
 
+            {/* Total Program Days (editable in both modes) */}
+            <View style={{ marginBottom: 16 }}>
+              <TextInput
+                label="Total Program Days *"
+                value={formData.totalProgramDays}
+                onChangeText={(v) =>
+                  handleInputChange(
+                    "totalProgramDays",
+                    v.replace(/[^0-9]/g, "")
+                  )
+                }
+                mode="outlined"
+                keyboardType="numeric"
+                style={styles.input}
+                error={!!errors.totalProgramDays}
+              />
+              <HelperText type="error" visible={!!errors.totalProgramDays}>
+                {errors.totalProgramDays}
+              </HelperText>
+            </View>
+
+            {/* Status & Admission only in edit mode */}
             {isEditMode && (
               <>
-                <View style={{ marginBottom: 16 }}>
-                  <TextInput
-                    label="Extend / Reduce Program Days"
-                    value={String(formData.extendReduceDays)}
-                    onChangeText={(v) =>
-                      handleInputChange("extendReduceDays", Number(v) || 0)
-                    }
-                    mode="outlined"
-                    keyboardType="numeric"
-                    placeholder="Use negative number to reduce days"
-                    style={styles.input}
-                  />
-                </View>
-
-                {/* Status */}
                 <View style={{ marginBottom: 16 }}>
                   <Text style={styles.typeLabel}>Status</Text>
                   <View style={styles.typeChips}>
@@ -336,7 +353,6 @@ const AddBeneficiaryScreen = ({ navigation, route }) => {
                   </View>
                 </View>
 
-                {/* Admission Status */}
                 <View style={{ marginBottom: 16 }}>
                   <Text style={styles.typeLabel}>Admission Status</Text>
                   <View style={styles.typeChips}>

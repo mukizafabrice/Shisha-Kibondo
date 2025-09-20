@@ -601,6 +601,7 @@ const styles = StyleSheet.create({
   searchInput: {
     marginBottom: 16,
     backgroundColor: "#fff",
+    height: 34,
   },
   textInputOutline: {
     borderRadius: 12,

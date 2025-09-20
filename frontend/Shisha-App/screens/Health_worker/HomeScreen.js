@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   ScrollView,
   Platform,
+  Dimensions,
 } from "react-native";
 import {
   TextInput,
@@ -34,6 +35,9 @@ const BLUE = "#007AFF";
 const ITEMS_PER_PAGE = 8;
 const PROGRAM_DAYS = 180; // 6 months
 
+// Get screen height for responsive maxHeight
+const { height: screenHeight } = Dimensions.get("window");
+
 const BeneficiariesScreen = ({ navigation, route }) => {
   const { logout } = useAuth();
   const [fontsLoaded] = useFonts({
@@ -51,6 +55,8 @@ const BeneficiariesScreen = ({ navigation, route }) => {
 
   const [selectedBeneficiary, setSelectedBeneficiary] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
+
+  const { userId } = route.params || {};
   const { user } = useAuth();
   useEffect(() => {
     fetchBeneficiaries();
@@ -71,12 +77,18 @@ const BeneficiariesScreen = ({ navigation, route }) => {
     }
   };
 
+  // State
+  const [selectedAdmissionStatus, setSelectedAdmissionStatus] = useState("All");
+
+  // Filtering
   const filteredBeneficiaries = useMemo(() => {
     let list = beneficiaries;
     if (selectedStatus !== "All")
       list = list.filter((b) => b.status === selectedStatus);
     if (selectedType !== "All")
       list = list.filter((b) => b.type === selectedType);
+    if (selectedAdmissionStatus !== "All")
+      list = list.filter((b) => b.admissionStatus === selectedAdmissionStatus);
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       list = list.filter(
@@ -87,7 +99,13 @@ const BeneficiariesScreen = ({ navigation, route }) => {
       );
     }
     return list;
-  }, [beneficiaries, selectedStatus, selectedType, searchQuery]);
+  }, [
+    beneficiaries,
+    selectedStatus,
+    selectedType,
+    selectedAdmissionStatus,
+    searchQuery,
+  ]);
 
   const paginatedBeneficiaries = useMemo(() => {
     const start = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -161,20 +179,6 @@ const BeneficiariesScreen = ({ navigation, route }) => {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <Surface style={styles.container}>
-        {/* Header */}
-        <View style={styles.topRow}>
-          <Button
-            icon="refresh"
-            mode="outlined"
-            onPress={fetchBeneficiaries}
-            style={styles.refreshButton}
-            textColor={BLUE}
-            labelStyle={styles.buttonLabel}
-          >
-            Refresh
-          </Button>
-        </View>
-
         {/* Search */}
         <TextInput
           value={searchQuery}
@@ -232,48 +236,99 @@ const BeneficiariesScreen = ({ navigation, route }) => {
               ))}
             </View>
           </View>
+          <View style={styles.filterBlock}>
+            <Text style={styles.filterLabel}>Admission Status</Text>
+            <View style={styles.chipsRow}>
+              {["All", "pending", "admitted", "rejected"].map((s) => (
+                <Chip
+                  key={s}
+                  selected={selectedAdmissionStatus === s}
+                  onPress={() => setSelectedAdmissionStatus(s)}
+                  style={[
+                    styles.chip,
+                    selectedAdmissionStatus === s && styles.selectedChip,
+                  ]}
+                  textStyle={styles.chipText}
+                  selectedColor={BLUE}
+                  showSelectedCheck={false}
+                >
+                  {s}
+                </Chip>
+              ))}
+            </View>
+          </View>
         </View>
 
-        {/* Beneficiary List */}
-        <ScrollView style={styles.listContainer}>
-          {paginatedBeneficiaries.length > 0 ? (
-            paginatedBeneficiaries.map((b) => (
-              <Card key={b._id} style={styles.card}>
-                <Card.Content>
-                  <View style={styles.rowBetween}>
-                    <View>
-                      <Text style={styles.name}>
-                        {b.firstName} {b.lastName}
-                      </Text>
-                      <View style={styles.detailRow}>
-                        <Text style={styles.detailLabel}>Attendance Rate:</Text>
-                        <Text style={styles.detailValue}>
-                          {Number(b.attendanceRate) || 0}%
+        {/* Beneficiary List container with a fixed height */}
+        <View style={styles.listContainerWrapper}>
+          <ScrollView
+            style={styles.listContainer}
+            contentContainerStyle={styles.listContentContainer}
+            showsVerticalScrollIndicator={true}
+          >
+            {paginatedBeneficiaries.length > 0 ? (
+              paginatedBeneficiaries.map((b) => (
+                <Card key={b._id} style={styles.card}>
+                  <Card.Content style={styles.cardContent}>
+                    <View style={styles.rowBetween}>
+                      {/* Left side: Beneficiary details */}
+                      <View style={{ flex: 1, paddingRight: 8 }}>
+                        <Text style={styles.name}>
+                          {b.firstName} {b.lastName}
                         </Text>
+                        <View style={styles.detailRow}>
+                          <Text style={styles.detailLabel}>Status:</Text>
+                          <Text
+                            style={[
+                              styles.detailValue,
+                              {
+                                color:
+                                  b.status === "active" ? "#27ae60" : "#e67e22",
+                              },
+                            ]}
+                          >
+                            {b.status}
+                          </Text>
+                        </View>
+                        <View style={styles.detailRow}>
+                          <Text style={styles.detailLabel}>Attendance:</Text>
+                          <Text style={styles.detailValue}>
+                            {Number(b.attendanceRate) || 0}%
+                          </Text>
+                        </View>
+                      </View>
+                      {/* Right side: Actions + Type */}
+                      <View
+                        style={{
+                          alignItems: "flex-end",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        <View style={{ flexDirection: "row", marginBottom: 6 }}>
+                          <IconButton
+                            icon="eye"
+                            iconColor={BLUE}
+                            onPress={() => openModalWith(b)}
+                            size={20}
+                            style={styles.iconButton}
+                          />
+                        </View>
+                        <Chip
+                          style={styles.typeTag}
+                          textStyle={styles.typeTagText}
+                        >
+                          {b.type}
+                        </Chip>
                       </View>
                     </View>
-                    <View style={{ flexDirection: "column" }}>
-                      <IconButton
-                        icon="eye"
-                        iconColor={BLUE}
-                        onPress={() => openModalWith(b)}
-                        size={22}
-                      />
-                      <Chip
-                        style={styles.typeTag}
-                        textStyle={styles.typeTagText}
-                      >
-                        {b.type}
-                      </Chip>
-                    </View>
-                  </View>
-                </Card.Content>
-              </Card>
-            ))
-          ) : (
-            <Text style={styles.empty}>No beneficiaries found.</Text>
-          )}
-        </ScrollView>
+                  </Card.Content>
+                </Card>
+              ))
+            ) : (
+              <Text style={styles.empty}>No beneficiaries found.</Text>
+            )}
+          </ScrollView>
+        </View>
 
         {/* Pagination */}
         {totalPages > 1 && (
@@ -326,9 +381,7 @@ const BeneficiariesScreen = ({ navigation, route }) => {
                     Close
                   </Button>
                 </View>
-
                 <Divider style={styles.divider} />
-
                 {/* Personal Info Card */}
                 <Card style={styles.modalCard}>
                   <Card.Title
@@ -446,7 +499,6 @@ const BeneficiariesScreen = ({ navigation, route }) => {
                               {meta.remainingDays}
                             </Text>
                           </View>
-
                           {/* Progress */}
                           <View style={{ marginTop: 12 }}>
                             <Text
@@ -489,19 +541,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 16,
   },
-  addButton: {
-    borderRadius: 8,
-    flex: 1,
-    marginRight: 8,
-    height: 48,
-    justifyContent: "center",
-  },
-  refreshButton: {
-    borderRadius: 8,
-    width: 110,
-    height: 48,
-    justifyContent: "center",
-  },
+
   buttonLabel: {
     fontFamily: "Poppins_600SemiBold",
     fontSize: 14,
@@ -509,6 +549,7 @@ const styles = StyleSheet.create({
   searchInput: {
     marginBottom: 16,
     backgroundColor: "#fff",
+    height: 34,
   },
   textInputOutline: {
     borderRadius: 12,
@@ -528,14 +569,14 @@ const styles = StyleSheet.create({
   chipsRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8, // Use gap for modern spacing
+    gap: 8,
   },
   chip: {
     borderRadius: 10,
     borderWidth: 1,
     borderColor: "#e0e0e0",
     backgroundColor: "#fff",
-    paddingHorizontal: 4,
+    paddingHorizontal: 1,
     minHeight: 36,
     justifyContent: "center",
   },
@@ -545,38 +586,74 @@ const styles = StyleSheet.create({
   },
   chipText: {
     fontFamily: "Poppins_500Medium",
-    fontSize: 13,
+    fontSize: 10,
     color: "#555",
   },
-  listContainer: {
-    flex: 1,
+  listContainerWrapper: {
+    maxHeight: screenHeight * 0.45,
+    flexShrink: 1,
+    marginBottom: 16,
   },
-  card: {
-    marginBottom: 12,
-    borderRadius: 12,
-    elevation: 3,
-    backgroundColor: "#fff",
+  listContainer: {
+    flexGrow: 0,
+  },
+  listContentContainer: {
+    paddingBottom: 16,
   },
   rowBetween: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
+  // --- CARD STYLES (UPDATED) ---
+  card: {
+    marginBottom: 6,
+    borderRadius: 12,
+    elevation: 2,
+    backgroundColor: "#fff",
+  },
+  cardContent: {
+    paddingVertical: 8, // Reduced padding for a smaller card
+  },
   name: {
     fontFamily: "Poppins_600SemiBold",
-    fontSize: 16,
-    color: "#34495e",
+    fontSize: 14, // Smaller font size for the name
+    color: "#2c3e50",
+  },
+  detailRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 4, // Tighter spacing between details
+  },
+  detailLabel: {
+    fontFamily: "Poppins_500Medium",
+    fontSize: 12, // Smaller font size for labels
+    color: "#7f8c8d",
+  },
+  detailValue: {
+    fontFamily: "Poppins_400Regular",
+    fontSize: 12, // Smaller font size for values
+    color: "#2c3e50",
+    textAlign: "right",
+  },
+  iconButton: {
+    width: 28, // Smaller icon size
+    height: 28,
   },
   typeTag: {
-    backgroundColor: "#e0e0e0",
+    backgroundColor: "#ecf0f1",
     alignSelf: "flex-start",
-    marginTop: 4,
+    marginTop: 6,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    marginBlockEnd: 0,
   },
   typeTagText: {
-    fontFamily: "Poppins_400Regular",
-    fontSize: 12,
-    color: "#333",
+    fontFamily: "Poppins_500Medium",
+    fontSize: 10,
+    color: "#34495e",
   },
+  // --- MODAL STYLES (UPDATED) ---
   empty: {
     textAlign: "center",
     marginTop: 40,
@@ -628,23 +705,6 @@ const styles = StyleSheet.create({
     fontFamily: "Poppins_600SemiBold",
     fontSize: 16,
     color: "#34495e",
-  },
-  detailRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 6,
-  },
-  detailLabel: {
-    fontFamily: "Poppins_600SemiBold",
-    fontSize: 13,
-    color: "#34495e",
-  },
-  detailValue: {
-    fontFamily: "Poppins_400Regular",
-    fontSize: 14,
-    color: "#333",
-    flexShrink: 1,
-    textAlign: "right",
   },
   modalProgress: {
     height: 10,
