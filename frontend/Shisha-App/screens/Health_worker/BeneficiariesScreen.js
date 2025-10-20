@@ -416,6 +416,12 @@ const BeneficiariesScreen = ({ navigation, route }) => {
                       </Text>
                     </View>
                     <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Gender:</Text>
+                      <Text style={styles.detailValue}>
+                        {selectedBeneficiary.gender}
+                      </Text>
+                    </View>
+                    <View style={styles.detailRow}>
                       <Text style={styles.detailLabel}>Status:</Text>
                       <Text style={styles.detailValue}>
                         {selectedBeneficiary.status}

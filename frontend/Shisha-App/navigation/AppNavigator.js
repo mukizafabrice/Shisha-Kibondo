@@ -8,7 +8,8 @@ import {
 } from "react-native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+// import { MaterialCommunityIcons } from "@expo/vector-icons";
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { IconButton } from "react-native-paper";
 import { useAuth } from "../context/AuthContext";
 
@@ -437,6 +438,16 @@ const AppNavigator = () => {
               headerTitleStyle: { fontWeight: "bold" },
             }}
           />
+          <Stack.Screen
+            name="ManagerReports"
+            component={ManagerReportsScreen}
+            options={{
+              title: "Reports",
+              headerStyle: { backgroundColor: "#007AFF" },
+              headerTintColor: "#fff",
+              headerTitleStyle: { fontWeight: "bold" },
+            }}
+          />
         </>
       ) : (
         <>
@@ -490,6 +501,16 @@ const AppNavigator = () => {
             component={PrivacyPolicyHealthScreen}
             options={{
               title: "Privacy Policy",
+              headerStyle: { backgroundColor: "#007AFF" },
+              headerTintColor: "#fff",
+              headerTitleStyle: { fontWeight: "bold" },
+            }}
+          />
+          <Stack.Screen
+            name="HealthWorkerReports"
+            component={HealthWorkerReportsScreen}
+            options={{
+              title: "Reports",
               headerStyle: { backgroundColor: "#007AFF" },
               headerTintColor: "#fff",
               headerTitleStyle: { fontWeight: "bold" },

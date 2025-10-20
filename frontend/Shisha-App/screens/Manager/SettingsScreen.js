@@ -163,6 +163,14 @@ const SettingsScreen = ({ navigation }) => {
               right={(props) => <List.Icon {...props} icon="chevron-right" />}
               onPress={() => navigation.navigate("Beneficiaries")}
             />
+            <List.Item
+              title="Reports"
+              left={(props) => (
+                <List.Icon {...props} color="#007AFF" icon="chart-bar" />
+              )}
+              right={(props) => <List.Icon {...props} icon="chevron-right" />}
+              onPress={() => navigation.navigate("ManagerReports")}
+            />
           </Card.Content>
         </Card>
 

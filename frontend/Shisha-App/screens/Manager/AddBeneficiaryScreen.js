@@ -43,6 +43,7 @@ const AddBeneficiaryScreen = ({ navigation, route }) => {
     lastName: "",
     village: "",
     type: "",
+    gender: "",
     totalProgramDays: "", // no hardcoded default
     status: "active",
     admissionStatus: "pending",
@@ -53,6 +54,7 @@ const AddBeneficiaryScreen = ({ navigation, route }) => {
   const [loadingUsers, setLoadingUsers] = useState(true);
 
   const beneficiaryTypes = ["pregnant", "breastfeeding", "child"];
+  const genderOptions = ["male", "female"];
   const statusOptions = ["active", "inactive"];
   const admissionOptions = ["pending", "admitted", "rejected"];
 
@@ -78,6 +80,7 @@ const AddBeneficiaryScreen = ({ navigation, route }) => {
         lastName: beneficiary.lastName || "",
         village: beneficiary.village || "",
         type: beneficiary.type || "",
+        gender: beneficiary.gender || "",
         totalProgramDays: beneficiary.totalProgramDays?.toString() || "",
         status: beneficiary.status || "active",
         admissionStatus: beneficiary.admissionStatus || "pending",
@@ -109,6 +112,7 @@ const AddBeneficiaryScreen = ({ navigation, route }) => {
     if (!formData.lastName.trim()) newErrors.lastName = "Last name is required";
     if (!formData.village.trim()) newErrors.village = "Village is required";
     if (!formData.type) newErrors.type = "Beneficiary type is required";
+    if (!formData.gender) newErrors.gender = "Gender is required";
     if (!formData.totalProgramDays || Number(formData.totalProgramDays) < 1) {
       newErrors.totalProgramDays = "Total program days must be at least 1";
     }
@@ -307,6 +311,28 @@ const AddBeneficiaryScreen = ({ navigation, route }) => {
               </View>
               <HelperText type="error" visible={!!errors.type}>
                 {errors.type}
+              </HelperText>
+            </View>
+
+            <View style={styles.typeContainer}>
+              <Text style={styles.typeLabel}>Gender *</Text>
+              <View style={styles.typeChips}>
+                {genderOptions.map((gender) => (
+                  <Chip
+                    key={gender}
+                    selected={formData.gender === gender}
+                    onPress={() => handleInputChange("gender", gender)}
+                    style={[
+                      styles.typeChip,
+                      formData.gender === gender && styles.selectedTypeChip,
+                    ]}
+                  >
+                    {gender.charAt(0).toUpperCase() + gender.slice(1)}
+                  </Chip>
+                ))}
+              </View>
+              <HelperText type="error" visible={!!errors.gender}>
+                {errors.gender}
               </HelperText>
             </View>
 

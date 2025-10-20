@@ -117,7 +117,12 @@ const DistributionScreen = () => {
         ? response.data
         : [];
 
-      const mapped = beneficiariesArray.map((b) => ({
+      // Filter only admitted beneficiaries
+      const admittedBeneficiaries = beneficiariesArray.filter(
+        (b) => b.admissionStatus === "admitted"
+      );
+
+      const mapped = admittedBeneficiaries.map((b) => ({
         label: `${b.firstName} ${b.lastName}`.trim(),
         value: b._id,
         type: b.type,

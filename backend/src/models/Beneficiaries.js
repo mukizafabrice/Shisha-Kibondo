@@ -33,6 +33,11 @@ const beneficiariesSchema = new mongoose.Schema(
       required: [true, "Please specify beneficiary type"],
       enum: ["pregnant", "breastfeeding", "child"],
     },
+    gender: {
+      type: String,
+      required: [true, "Please specify gender"],
+      enum: ["male", "female"],
+    },
     status: {
       type: String,
       required: [true, "Please specify status"],
@@ -92,6 +97,22 @@ beneficiariesSchema.methods.calculateAttendanceRate = function () {
   return this.attendanceRate;
 };
 
-const Beneficiaries = mongoose.model("Beneficiaries", beneficiariesSchema);
+beneficiariesSchema.post("findOneAndDelete", async function (doc) {
+  if (!doc) return;
 
+  const beneficiaryId = doc._id;
+
+  try {
+    await Promise.all([
+      mongoose.model("Distribution").deleteMany({ beneficiaryId }),
+      // mongoose.model("ProgramDays").deleteMany({ beneficiaryId }),
+    ]);
+  } catch (err) {
+    console.error(
+      `Error during cascading delete for user ${beneficiaryId}:`,
+      err
+    );
+  }
+});
+const Beneficiaries = mongoose.model("Beneficiaries", beneficiariesSchema);
 export default Beneficiaries;

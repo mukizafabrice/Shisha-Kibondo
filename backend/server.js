@@ -10,6 +10,8 @@ import productRoutes from "./src/routes/productRoutes.js";
 import mainStockRoutes from "./src/routes/mainStockRoutes.js";
 import mainStockTransactionRoutes from "./src/routes/mainStockTransactionRoutes.js";
 import distributionRoutes from "./src/routes/distributionRoutes.js";
+import managerReportRoutes from "./src/routes/managerReportRoutes.js";
+import healthWorkerReportRoutes from "./src/routes/healthWorkerReportRoutes.js";
 // All middleware imports and usage removed
 
 dotenv.config();
@@ -41,6 +43,8 @@ app.use("/api/products", productRoutes);
 app.use("/api/main-stock", mainStockRoutes);
 app.use("/api/mainStock-transactions", mainStockTransactionRoutes);
 app.use("/api/distributions", distributionRoutes);
+app.use("/api/reports/manager", managerReportRoutes);
+app.use("/api/reports/health-worker", healthWorkerReportRoutes);
 
 connectDB()
   .then(() => {

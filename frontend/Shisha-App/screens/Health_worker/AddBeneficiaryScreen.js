@@ -21,6 +21,7 @@ import BeneficiaryService from "../../services/beneficiaryService";
 
 const BLUE = "#007AFF";
 const beneficiaryTypes = ["pregnant", "breastfeeding", "child"];
+const genderOptions = ["male", "female"];
 
 const AddBeneficiaryScreen = ({ navigation }) => {
   const { user } = useAuth();
@@ -40,6 +41,7 @@ const AddBeneficiaryScreen = ({ navigation }) => {
     lastName: "",
     village: "",
     type: "",
+    gender: "",
     totalProgramDays: "",
   });
   const [errors, setErrors] = useState({});
@@ -59,6 +61,7 @@ const AddBeneficiaryScreen = ({ navigation }) => {
     if (!formData.lastName.trim()) newErrors.lastName = "Last name is required";
     if (!formData.village.trim()) newErrors.village = "Village is required";
     if (!formData.type) newErrors.type = "Beneficiary type is required";
+    if (!formData.gender) newErrors.gender = "Gender is required";
     if (!formData.totalProgramDays || isNaN(formData.totalProgramDays))
       newErrors.totalProgramDays = "Valid total program days is required";
     setErrors(newErrors);
@@ -85,6 +88,7 @@ const AddBeneficiaryScreen = ({ navigation }) => {
         lastName: formData.lastName,
         village: formData.village,
         type: formData.type,
+        gender: formData.gender,
         totalProgramDays: Number(formData.totalProgramDays),
       };
 
@@ -188,6 +192,26 @@ const AddBeneficiaryScreen = ({ navigation }) => {
             </View>
             <HelperText type="error" visible={!!errors.type}>
               {errors.type}
+            </HelperText>
+
+            <Text style={styles.sectionTitle}>Gender *</Text>
+            <View style={styles.typeChips}>
+              {genderOptions.map((gender) => (
+                <Chip
+                  key={gender}
+                  selected={formData.gender === gender}
+                  onPress={() => handleInputChange("gender", gender)}
+                  style={[
+                    styles.typeChip,
+                    formData.gender === gender && styles.selectedTypeChip,
+                  ]}
+                >
+                  {gender.charAt(0).toUpperCase() + gender.slice(1)}
+                </Chip>
+              ))}
+            </View>
+            <HelperText type="error" visible={!!errors.gender}>
+              {errors.gender}
             </HelperText>
 
             <TextInput

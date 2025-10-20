@@ -14,7 +14,7 @@ export const createProduct = async (req, res) => {
 
     // Check if product with the same name already exists (case-insensitive)
     const existingProduct = await Product.findOne({
-      name: { $regex: new RegExp(`^${cleanName}$`, "i") }
+      name: { $regex: new RegExp(`^${cleanName}$`, "i") },
     });
 
     if (existingProduct) {
@@ -41,7 +41,7 @@ export const createProduct = async (req, res) => {
 // Get all products
 export const getProducts = async (req, res) => {
   try {
-    const products = await Product.find();
+    const products = await Product.find().sort({ createdAt: -1 });
     res.json(products);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -63,7 +63,7 @@ export const updateProduct = async (req, res) => {
     // Check for duplicate name (case-insensitive, excluding current product)
     const duplicate = await Product.findOne({
       name: { $regex: new RegExp(`^${cleanName}$`, "i") },
-      _id: { $ne: id }
+      _id: { $ne: id },
     });
 
     if (duplicate) {

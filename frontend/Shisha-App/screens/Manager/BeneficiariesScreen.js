@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   View,
   Text,
@@ -21,7 +21,9 @@ import {
   Modal,
   Divider,
   ProgressBar,
+  FAB,
 } from "react-native-paper";
+import { useFocusEffect } from "@react-navigation/native";
 import {
   useFonts,
   Poppins_400Regular,
@@ -35,7 +37,6 @@ const BLUE = "#007AFF";
 const ITEMS_PER_PAGE = 8;
 const PROGRAM_DAYS = 180; // 6 months
 
-// Get screen height for responsive maxHeight
 const { height: screenHeight } = Dimensions.get("window");
 
 const BeneficiariesScreen = ({ navigation, route }) => {
@@ -55,14 +56,11 @@ const BeneficiariesScreen = ({ navigation, route }) => {
 
   const [selectedBeneficiary, setSelectedBeneficiary] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [selectedAdmissionStatus, setSelectedAdmissionStatus] = useState("All");
 
   const { userId } = route.params || {};
 
-  useEffect(() => {
-    fetchBeneficiaries();
-  }, []);
-
-  const fetchBeneficiaries = async () => {
+  const fetchBeneficiaries = useCallback(async () => {
     setLoading(true);
     try {
       const data = await BeneficiaryService.getBeneficiaries();
@@ -73,12 +71,15 @@ const BeneficiariesScreen = ({ navigation, route }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  // State
-  const [selectedAdmissionStatus, setSelectedAdmissionStatus] = useState("All");
+  useFocusEffect(
+    useCallback(() => {
+      fetchBeneficiaries();
+      return () => {};
+    }, [fetchBeneficiaries])
+  );
 
-  // Filtering
   const filteredBeneficiaries = useMemo(() => {
     let list = beneficiaries;
     if (selectedStatus !== "All")
@@ -177,29 +178,8 @@ const BeneficiariesScreen = ({ navigation, route }) => {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <Surface style={styles.container}>
-        {/* Header */}
-        <View style={styles.topRow}>
-          <Button
-            icon="account-plus"
-            mode="contained"
-            onPress={() => navigation.navigate("AddBeneficiary", { userId })}
-            style={styles.addButton}
-            buttonColor={BLUE}
-            labelStyle={styles.buttonLabel}
-          >
-            Add Beneficiary
-          </Button>
-          <Button
-            icon="refresh"
-            mode="outlined"
-            onPress={fetchBeneficiaries}
-            style={styles.refreshButton}
-            textColor={BLUE}
-            labelStyle={styles.buttonLabel}
-          >
-            Refresh
-          </Button>
-        </View>
+        {/* Header (Empty as FAB is positioned absolutely) */}
+        <View style={styles.topRow} />
 
         {/* Search */}
         <TextInput
@@ -397,6 +377,15 @@ const BeneficiariesScreen = ({ navigation, route }) => {
           </View>
         )}
 
+        {/* 🚀 UPDATED: Floating Action Button (FAB) with Icon Only */}
+        <FAB
+          icon="plus" // Icon: plus sign
+          style={styles.fab}
+          onPress={() => navigation.navigate("AddBeneficiary", { userId })}
+          color="#fff" // Icon color (set to white)
+          // The label and fabLabel styles are removed as the button is icon-only.
+        />
+
         {/* Modal */}
         <Portal>
           <Modal
@@ -453,6 +442,12 @@ const BeneficiariesScreen = ({ navigation, route }) => {
                       <Text style={styles.detailLabel}>Type:</Text>
                       <Text style={styles.detailValue}>
                         {selectedBeneficiary.type}
+                      </Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Gender:</Text>
+                      <Text style={styles.detailValue}>
+                        {selectedBeneficiary.gender}
                       </Text>
                     </View>
                     <View style={styles.detailRow}>
@@ -577,22 +572,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#f8f9fa",
   },
   topRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+    // Only used to push content down if needed, otherwise it's just marginBottom
     marginBottom: 16,
-  },
-  addButton: {
-    borderRadius: 8,
-    flex: 1,
-    marginRight: 8,
-    height: 48,
-    justifyContent: "center",
-  },
-  refreshButton: {
-    borderRadius: 8,
-    width: 110,
-    height: 48,
-    justifyContent: "center",
   },
   buttonLabel: {
     fontFamily: "Poppins_600SemiBold",
@@ -657,7 +638,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-  // --- CARD STYLES (UPDATED) ---
   card: {
     marginBottom: 6,
     borderRadius: 12,
@@ -665,31 +645,31 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
   cardContent: {
-    paddingVertical: 8, // Reduced padding for a smaller card
+    paddingVertical: 8,
   },
   name: {
     fontFamily: "Poppins_600SemiBold",
-    fontSize: 14, // Smaller font size for the name
+    fontSize: 14,
     color: "#2c3e50",
   },
   detailRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 4, // Tighter spacing between details
+    marginBottom: 4,
   },
   detailLabel: {
     fontFamily: "Poppins_500Medium",
-    fontSize: 12, // Smaller font size for labels
+    fontSize: 12,
     color: "#7f8c8d",
   },
   detailValue: {
     fontFamily: "Poppins_400Regular",
-    fontSize: 12, // Smaller font size for values
+    fontSize: 12,
     color: "#2c3e50",
     textAlign: "right",
   },
   iconButton: {
-    width: 28, // Smaller icon size
+    width: 28,
     height: 28,
   },
   typeTag: {
@@ -705,7 +685,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: "#34495e",
   },
-  // --- MODAL STYLES (UPDATED) ---
   empty: {
     textAlign: "center",
     marginTop: 40,
@@ -718,12 +697,23 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     marginTop: 16,
+    paddingBottom: 20,
   },
   pageInfo: {
     fontFamily: "Poppins_500Medium",
     fontSize: 14,
     color: "#555",
   },
+  // --- FAB STYLES (UPDATED for icon-only) ---
+  fab: {
+    position: "absolute",
+    margin: 16,
+    right: 0,
+    bottom: 0,
+    backgroundColor: BLUE, // Background color
+    // Use the default size for a clean circle (or add size='small' etc. if needed)
+  },
+  // --- MODAL STYLES ---
   modalContainer: {
     backgroundColor: "#fff",
     margin: 20,

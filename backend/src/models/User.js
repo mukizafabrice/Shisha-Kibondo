@@ -41,7 +41,7 @@ const userSchema = new mongoose.Schema(
       default: "umunyabuzima",
     },
 
-    // 🔑 Reset password fields
+    // 🔑 Reset password fields``t11  11``5`````
     resetPasswordToken: {
       type: String, // store OTP as string (numeric but easier to handle as string)
       required: false,
@@ -57,6 +57,22 @@ const userSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+// Post-delete hook to remove related documents
+userSchema.post("findOneAndDelete", async function (doc) {
+  if (!doc) return;
+
+  const userId = doc._id;
+
+  try {
+    await Promise.all([
+      mongoose.model("Beneficiaries").deleteMany({ userId }),
+      mongoose.model("Stock").deleteMany({ userId }),
+    ]);
+  } catch (err) {
+    console.error(`Error during cascading delete for user ${userId}:`, err);
+  }
+});
 
 const User = mongoose.model("User", userSchema);
 

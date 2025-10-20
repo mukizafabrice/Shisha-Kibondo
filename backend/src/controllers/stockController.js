@@ -39,7 +39,8 @@ export const getStock = async (req, res) => {
     const filter = userId ? { userId } : {};
     const stocks = await Stock.find(filter)
       .populate("userId", "name email phone role")
-      .populate("productId", "name description"); // Populate product details
+      .populate("productId", "name description")
+      .sort({ createdAt: -1 });
 
     res.json(stocks);
   } catch (error) {

@@ -13,6 +13,7 @@ export const createBeneficiary = async (req, res) => {
       lastName,
       village,
       type,
+      gender,
       totalProgramDays,
     } = req.body;
 
@@ -47,6 +48,7 @@ export const createBeneficiary = async (req, res) => {
       lastName,
       village,
       type,
+      gender,
       status: "active",
       totalProgramDays, // now user-defined
     });
@@ -530,6 +532,24 @@ export const getBeneficiaryStats = async (req, res) => {
               $cond: [{ $eq: ["$type", "child"] }, 1, 0],
             },
           },
+          maleChildren: {
+            $sum: {
+              $cond: [
+                { $and: [{ $eq: ["$type", "child"] }, { $eq: ["$gender", "male"] }] },
+                1,
+                0,
+              ],
+            },
+          },
+          femaleChildren: {
+            $sum: {
+              $cond: [
+                { $and: [{ $eq: ["$type", "child"] }, { $eq: ["$gender", "female"] }] },
+                1,
+                0,
+              ],
+            },
+          },
           averageAttendance: { $avg: "$attendanceRate" },
         },
       },
@@ -542,6 +562,8 @@ export const getBeneficiaryStats = async (req, res) => {
       pregnant: 0,
       breastfeeding: 0,
       child: 0,
+      maleChildren: 0,
+      femaleChildren: 0,
       averageAttendance: 0,
     };
 

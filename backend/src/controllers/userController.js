@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import nodemailer from "nodemailer";
-// ...existing code...
+
 export const register = async (req, res) => {
   try {
     const { name, email, phone, nationalId, role } = req.body;
@@ -141,7 +141,9 @@ export const remove = async (req, res) => {
 // Fetch all users
 export const getUsers = async (req, res) => {
   try {
-    const users = await User.find({}).select("-password"); // Exclude password for security
+    const users = await User.find({})
+      .select("-password")
+      .sort({ createdAt: -1 });
     res.json(users);
   } catch (error) {
     res.status(500).json({ message: error.message });

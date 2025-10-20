@@ -22,7 +22,9 @@
       },
       "edgeToEdgeEnabled": true
     },
-    "plugins": [],
+    "plugins": [
+      "expo-font"
+    ],
     "web": {
       "favicon": "./assets/favicon.png"
     }
