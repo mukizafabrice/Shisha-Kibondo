@@ -10,16 +10,21 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Docker Login
         run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USER }}" --password-stdin
 
-      - name: Build Image
-        run: docker build -t gatete/myapp:latest .
+      
+      - name: Build Backend Image
+        run: docker build -t gatete/my-backend:latest ./backend
 
-      - name: Push Image
-        run: docker push gatete/myapp:latest
+      - name: Push Backend Image
+        run: docker push gatete/my-backend:latest
 
-     
+      - name: Build Frontend Image
+        run: docker build -t gatete/my-frontend:latest ./frontend
+
+      - name: Push Frontend Image
+        run: docker push gatete/my-frontend:latest
