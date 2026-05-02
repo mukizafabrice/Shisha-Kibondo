@@ -1,0 +1,38 @@
+name: Deploy Node App
+
+on:
+  push:
+    branches:
+      - main
+
+# Force the runner to use Node 24 to avoid deprecation warnings
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          # If you want caching, point it to the backend lockfile
+          # cache: 'npm'
+          # cache-dependency-path: './backend/package-lock.json'
+
+      - name: Docker Login
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USER }}" --password-stdin
+
+      - name: Build and Push Backend
+        run: |
+          docker build -t gatete/my-backend:latest ./backend
+          docker push gatete/my-backend:latest
+
+      - name: Build and Push Frontend
+        run: |
+          docker build -t gatete/my-frontend:latest ./frontend
+          docker push gatete/my-frontend:latest
