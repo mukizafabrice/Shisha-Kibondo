@@ -21,13 +21,13 @@ jobs:
         run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USER }}" --password-stdin
 
       - name: Build and Push Backend
-        # We tell Docker to look inside the /backend folder for the Dockerfile
+        # We point Docker to the /backend subfolder
         run: |
           docker build -t gatete/my-backend:latest ./backend
           docker push gatete/my-backend:latest
 
       - name: Build and Push Frontend
-        # We tell Docker to look inside the /frontend folder for the Dockerfile
+        # We point Docker to the /frontend subfolder
         run: |
           docker build -t gatete/my-frontend:latest ./frontend
           docker push gatete/my-frontend:latest
